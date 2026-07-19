@@ -12,6 +12,7 @@ export type OfferingTypeBilling = {
   sort_order: number;
   billing_type: BillingType;
   billing_interval: BillingInterval | null;
+  minimum_price: number;
   max_per_business: number | null;
   unique_per_owner_profile: boolean;
   requires_affinity_group: boolean;
@@ -47,6 +48,7 @@ function parseOfferingType(value: unknown): OfferingTypeBilling {
       row.billing_interval === 'year'
         ? row.billing_interval
         : null,
+    minimum_price: numberFrom(row.minimum_price),
     max_per_business: row.max_per_business === null || row.max_per_business === undefined ? null : numberFrom(row.max_per_business),
     unique_per_owner_profile: row.unique_per_owner_profile === true,
     requires_affinity_group: row.requires_affinity_group === true,
@@ -65,11 +67,13 @@ export async function updateOfferingTypeBilling(input: {
   slug: string;
   billingType: BillingType;
   billingInterval: BillingInterval | null;
+  minimumPrice: number;
 }): Promise<OfferingTypeBilling> {
   const { data, error } = await supabase.rpc('control_update_offering_type_billing', {
     p_slug: input.slug,
     p_billing_type: input.billingType,
     p_billing_interval: input.billingInterval,
+    p_minimum_price: input.minimumPrice,
   });
   if (error) throw error;
   return parseOfferingType(data);

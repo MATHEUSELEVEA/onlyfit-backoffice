@@ -10,6 +10,15 @@ export function formatCurrency(value: number): string {
   }).format(value);
 }
 
+export function formatCurrencyExact(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export function formatDateTime(date: Date): string {
   return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',

@@ -22,7 +22,7 @@ import {
 import { FormEvent, useMemo, useState } from 'react';
 import { useAuth } from './contexts/useAuth';
 import type { WeeklyActivity } from './lib/dashboard';
-import { formatCurrency, formatDateTime, formatNumber } from './lib/format';
+import { formatCurrency, formatCurrencyExact, formatDateTime, formatNumber } from './lib/format';
 import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
@@ -69,6 +69,20 @@ const staffRoleOptions: ReadonlyArray<{ value: StaffRole; label: string; descrip
   { value: 'admin', label: 'Administrador', description: 'Configuração e operação da plataforma.' },
   { value: 'super_admin', label: 'Superadministrador', description: 'Acesso total, incluindo gestão da equipe.' },
 ];
+
+function parseCurrencyInput(value: string): number | null {
+  const normalized = value.trim().replace(/\./g, '').replace(',', '.');
+  if (normalized === '') return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : null;
+}
+
+function formatPriceInput(value: number): string {
+  return value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
 function staffRoleLabel(role: StaffRole): string {
   return staffRoleOptions.find((option) => option.value === role)?.label ?? role;
@@ -247,16 +261,27 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
   const updateMutation = useUpdateOfferingTypeBilling();
   const [billingType, setBillingType] = useState<BillingType>(item.billing_type);
   const [billingInterval, setBillingInterval] = useState<BillingInterval | null>(item.billing_interval);
+  const [minimumPriceInput, setMinimumPriceInput] = useState(() => formatPriceInput(item.minimum_price));
   const [message, setMessage] = useState('');
 
-  const dirty = billingType !== item.billing_type || billingInterval !== item.billing_interval;
+  const parsedMinimumPrice = parseCurrencyInput(minimumPriceInput);
+  const minimumPrice = billingType === 'free' ? 0 : parsedMinimumPrice;
+  const isMinimumPriceInvalid = minimumPrice === null || minimumPrice < 0;
+  const dirty =
+    billingType !== item.billing_type ||
+    billingInterval !== item.billing_interval ||
+    Math.round((minimumPrice ?? -1) * 100) !== Math.round(item.minimum_price * 100);
   const isRecurring = billingType === 'recurring';
 
   const save = () => {
     const nextInterval = billingType === 'recurring' ? billingInterval ?? 'month' : null;
     setMessage('');
+    if (minimumPrice === null || isMinimumPriceInvalid) {
+      setMessage('Informe um valor mínimo válido.');
+      return;
+    }
     updateMutation.mutate(
-      { slug: item.slug, billingType, billingInterval: nextInterval },
+      { slug: item.slug, billingType, billingInterval: nextInterval, minimumPrice },
       {
         onSuccess: () => setMessage('Configuração salva. Ofertas ativas deste tipo foram sincronizadas.'),
         onError: (error) => setMessage(error instanceof Error ? error.message : 'Não foi possível salvar.'),
@@ -290,6 +315,7 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
               setBillingType(next);
               if (next !== 'recurring') setBillingInterval(null);
               if (next === 'recurring' && !billingInterval) setBillingInterval('month');
+              if (next === 'free') setMinimumPriceInput(formatPriceInput(0));
             }}
           >
             {billingTypeOptions.map((option) => (
@@ -311,7 +337,28 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
           </select>
         </label>
 
-        <button className="button secondary" type="button" disabled={!canEdit || !dirty || updateMutation.isPending} onClick={save}>
+        <label>
+          <span>Valor mínimo</span>
+          <input
+            value={minimumPriceInput}
+            disabled={!canEdit || billingType === 'free'}
+            inputMode="decimal"
+            aria-invalid={isMinimumPriceInvalid}
+            onBlur={() => {
+              if (minimumPrice !== null) setMinimumPriceInput(formatPriceInput(minimumPrice));
+            }}
+            onChange={(event) => {
+              setMinimumPriceInput(event.target.value.replace(/[^\d.,]/g, ''));
+            }}
+          />
+        </label>
+
+        <button
+          className="button secondary"
+          type="button"
+          disabled={!canEdit || !dirty || isMinimumPriceInvalid || updateMutation.isPending}
+          onClick={save}
+        >
           {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <HandCoins size={16} />}
           Salvar
         </button>
@@ -319,7 +366,8 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
 
       <p className="billing-summary">
         Profissional verá: <strong>{billingTypeLabel(billingType)}</strong>
-        {billingType === 'recurring' ? `, ${billingIntervalLabel(billingInterval ?? 'month').toLowerCase()}` : ''}.
+        {billingType === 'recurring' ? `, ${billingIntervalLabel(billingInterval ?? 'month').toLowerCase()}` : ''}
+        {billingType !== 'free' ? `, mínimo ${formatCurrencyExact(minimumPrice ?? 0)}` : ', sem cobrança'}.
       </p>
       {message && <p className="row-message" role="status">{message}</p>}
     </article>
@@ -337,7 +385,7 @@ function OfferingTypesPage() {
         <div>
           <p className="section-label">Configuração</p>
           <h1>Tipos de oferta</h1>
-          <span>Defina a forma de cobrança que profissionais não podem alterar.</span>
+          <span>Defina a cobrança e o valor mínimo que profissionais não podem reduzir.</span>
         </div>
         <div className="header-actions">
           <button className="button secondary" type="button" onClick={() => refetch()} disabled={isFetching}>
@@ -351,7 +399,7 @@ function OfferingTypesPage() {
         <div className="inline-alert">
           <HandCoins size={18} />
           {canEdit
-            ? 'O tipo de cobrança é definido pela equipe OnlyFit. No app, o profissional configura apenas o valor e os detalhes da oferta.'
+            ? 'A equipe OnlyFit define o tipo de cobrança e o valor mínimo. No app, o profissional configura apenas valores iguais ou superiores e os detalhes da oferta.'
             : 'Seu papel permite consultar esta configuração, mas somente administradores podem alterá-la.'}
         </div>
 
