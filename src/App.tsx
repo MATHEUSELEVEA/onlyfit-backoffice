@@ -15,8 +15,12 @@ import {
   Moon,
   Pencil,
   RefreshCw,
+  Rss,
   Save,
   Shield,
+  Shuffle,
+  SlidersHorizontal,
+  Sparkles,
   UserPlus,
   Users,
   X,
@@ -31,6 +35,8 @@ import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
 import { useOfferingTypeBilling, useUpdateOfferingTypeBilling } from './hooks/useOfferingTypeBilling';
 import { usePlatformPaymentSettings, useUpdatePlatformPaymentSettings } from './hooks/usePlatformPaymentSettings';
 import { usePlatformStaff } from './hooks/usePlatformStaff';
+import { useFeedAlgorithmSettings, useUpdateFeedAlgorithmSettings } from './hooks/useFeedAlgorithm';
+import type { FeedMode } from './lib/feedSettings';
 import {
   useCreatePlatformStaff,
   useCurrentStaffRole,
@@ -48,6 +54,7 @@ import {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'feed', label: 'Feed', icon: Rss },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
   { id: 'users', label: 'Equipe', icon: Users },
@@ -55,7 +62,7 @@ const navItems = [
   { label: 'Alertas', icon: Bell, disabled: true },
 ] as const;
 
-type SectionId = 'dashboard' | 'offering-types' | 'finance' | 'users';
+type SectionId = 'dashboard' | 'feed' | 'offering-types' | 'finance' | 'users';
 
 const billingTypeOptions: ReadonlyArray<{ value: BillingType; label: string }> = [
   { value: 'one_time', label: 'Pagamento único' },
@@ -457,6 +464,337 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
       </p>
       {message && <p className="row-message" role="status">{message}</p>}
     </article>
+  );
+}
+
+function parseDecimalInput(value: string): number | null {
+  const normalized = value.trim().replace(',', '.');
+  if (normalized === '') return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function formatDecimal(value: number, maxFractionDigits = 3): string {
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: maxFractionDigits });
+}
+
+type FeedFieldKey =
+  | 'weightAffinity'
+  | 'weightRetention'
+  | 'weightEngagement'
+  | 'weightNovelty'
+  | 'weightExploration'
+  | 'penaltyQuicklySkipped'
+  | 'penaltyAlreadyWatched'
+  | 'diversityCreatorPenalty'
+  | 'diversityTopicPenalty'
+  | 'noveltyHalfLifeHours';
+
+type FeedFieldDescriptor = {
+  key: FeedFieldKey;
+  label: string;
+  hint: string;
+  min?: number;
+};
+
+const feedWeightFields: ReadonlyArray<FeedFieldDescriptor> = [
+  { key: 'weightAffinity', label: 'Afinidade', hint: 'Quanto o interesse do usuário pesa (padrão 0,40).' },
+  { key: 'weightRetention', label: 'Retenção', hint: 'Peso de quanto do vídeo costuma ser assistido (padrão 0,30).' },
+  { key: 'weightEngagement', label: 'Engajamento', hint: 'Peso de curtidas, comentários, saves e shares (padrão 0,15).' },
+  { key: 'weightNovelty', label: 'Novidade', hint: 'Peso da recência da publicação (padrão 0,10).' },
+  { key: 'weightExploration', label: 'Exploração', hint: 'Peso do fator aleatório que injeta descoberta (padrão 0,05).' },
+];
+
+const feedTuningFields: ReadonlyArray<FeedFieldDescriptor> = [
+  { key: 'penaltyQuicklySkipped', label: 'Penalidade — pulou rápido', hint: 'Desconto para posts que o usuário já ignorou (padrão 0,30).' },
+  { key: 'penaltyAlreadyWatched', label: 'Penalidade — já assistiu', hint: 'Desconto para posts já vistos por completo (padrão 1,00).' },
+  { key: 'diversityCreatorPenalty', label: 'Diversidade — mesmo criador', hint: 'Desconto por post repetido do mesmo criador (padrão 0,12).' },
+  { key: 'diversityTopicPenalty', label: 'Diversidade — mesmo tema', hint: 'Desconto por post repetido do mesmo grupo (padrão 0,04).' },
+  { key: 'noveltyHalfLifeHours', label: 'Meia-vida da novidade (horas)', hint: 'Em quantas horas a novidade cai pela metade (padrão 24).', min: 0.1 },
+];
+
+const feedDefaults: Record<FeedFieldKey, number> = {
+  weightAffinity: 0.4,
+  weightRetention: 0.3,
+  weightEngagement: 0.15,
+  weightNovelty: 0.1,
+  weightExploration: 0.05,
+  penaltyQuicklySkipped: 0.3,
+  penaltyAlreadyWatched: 1,
+  diversityCreatorPenalty: 0.12,
+  diversityTopicPenalty: 0.04,
+  noveltyHalfLifeHours: 24,
+};
+
+function FeedField({
+  descriptor,
+  value,
+  disabled,
+  onChange,
+  onBlurFormat,
+}: {
+  descriptor: FeedFieldDescriptor;
+  value: string;
+  disabled: boolean;
+  onChange: (raw: string) => void;
+  onBlurFormat: () => void;
+}) {
+  const parsed = parseDecimalInput(value);
+  const min = descriptor.min ?? 0;
+  const invalid = parsed === null || parsed < min;
+  return (
+    <label>
+      <span>{descriptor.label}</span>
+      <input
+        value={value}
+        disabled={disabled}
+        inputMode="decimal"
+        aria-invalid={invalid}
+        onBlur={onBlurFormat}
+        onChange={(event) => onChange(event.target.value.replace(/[^\d.,]/g, ''))}
+      />
+      <small>{descriptor.hint}</small>
+    </label>
+  );
+}
+
+function FeedAlgorithmPage() {
+  const { data: currentRole } = useCurrentStaffRole();
+  const canEdit = currentRole === 'super_admin' || currentRole === 'admin';
+  const { data: settings, isLoading, isError, refetch, isFetching } = useFeedAlgorithmSettings(true);
+  const updateMutation = useUpdateFeedAlgorithmSettings();
+
+  const [mode, setMode] = useState<FeedMode>('algorithm');
+  const [values, setValues] = useState<Record<FeedFieldKey, string>>(() =>
+    Object.fromEntries(
+      (Object.keys(feedDefaults) as FeedFieldKey[]).map((key) => [key, formatDecimal(feedDefaults[key])]),
+    ) as Record<FeedFieldKey, string>,
+  );
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Popula o formulário quando os dados do banco chegam (uma vez por linha).
+  const stamp = settings?.updated_at ?? (settings ? 'loaded' : null);
+  if (settings && stamp !== hydratedFor) {
+    setMode(settings.mode);
+    setValues({
+      weightAffinity: formatDecimal(settings.weight_affinity),
+      weightRetention: formatDecimal(settings.weight_retention),
+      weightEngagement: formatDecimal(settings.weight_engagement),
+      weightNovelty: formatDecimal(settings.weight_novelty),
+      weightExploration: formatDecimal(settings.weight_exploration),
+      penaltyQuicklySkipped: formatDecimal(settings.penalty_quickly_skipped),
+      penaltyAlreadyWatched: formatDecimal(settings.penalty_already_watched),
+      diversityCreatorPenalty: formatDecimal(settings.diversity_creator_penalty),
+      diversityTopicPenalty: formatDecimal(settings.diversity_topic_penalty),
+      noveltyHalfLifeHours: formatDecimal(settings.novelty_half_life_hours),
+    });
+    setHydratedFor(stamp);
+  }
+
+  const parsedValues = useMemo(() => {
+    const result = {} as Record<FeedFieldKey, number | null>;
+    for (const key of Object.keys(feedDefaults) as FeedFieldKey[]) {
+      result[key] = parseDecimalInput(values[key]);
+    }
+    return result;
+  }, [values]);
+
+  const weightSum = feedWeightFields.reduce((sum, field) => sum + (parsedValues[field.key] ?? 0), 0);
+  const hasInvalid = (Object.keys(feedDefaults) as FeedFieldKey[]).some((key) => {
+    const parsed = parsedValues[key];
+    const min = key === 'noveltyHalfLifeHours' ? 0.1 : 0;
+    return parsed === null || parsed < min;
+  });
+
+  const setField = (key: FeedFieldKey, raw: string) => {
+    setValues((current) => ({ ...current, [key]: raw }));
+  };
+
+  const formatField = (key: FeedFieldKey) => {
+    const parsed = parsedValues[key];
+    if (parsed !== null) setValues((current) => ({ ...current, [key]: formatDecimal(parsed) }));
+  };
+
+  const restoreDefaults = () => {
+    setValues(
+      Object.fromEntries(
+        (Object.keys(feedDefaults) as FeedFieldKey[]).map((key) => [key, formatDecimal(feedDefaults[key])]),
+      ) as Record<FeedFieldKey, string>,
+    );
+  };
+
+  const save = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null);
+    if (mode === 'algorithm' && hasInvalid) {
+      setMessage({ type: 'error', text: 'Confira os valores: pesos não podem ser negativos e a meia-vida deve ser positiva.' });
+      return;
+    }
+    updateMutation.mutate(
+      {
+        mode,
+        weightAffinity: parsedValues.weightAffinity ?? feedDefaults.weightAffinity,
+        weightRetention: parsedValues.weightRetention ?? feedDefaults.weightRetention,
+        weightEngagement: parsedValues.weightEngagement ?? feedDefaults.weightEngagement,
+        weightNovelty: parsedValues.weightNovelty ?? feedDefaults.weightNovelty,
+        weightExploration: parsedValues.weightExploration ?? feedDefaults.weightExploration,
+        penaltyQuicklySkipped: parsedValues.penaltyQuicklySkipped ?? feedDefaults.penaltyQuicklySkipped,
+        penaltyAlreadyWatched: parsedValues.penaltyAlreadyWatched ?? feedDefaults.penaltyAlreadyWatched,
+        diversityCreatorPenalty: parsedValues.diversityCreatorPenalty ?? feedDefaults.diversityCreatorPenalty,
+        diversityTopicPenalty: parsedValues.diversityTopicPenalty ?? feedDefaults.diversityTopicPenalty,
+        noveltyHalfLifeHours: parsedValues.noveltyHalfLifeHours ?? feedDefaults.noveltyHalfLifeHours,
+      },
+      {
+        onSuccess: () =>
+          setMessage({ type: 'success', text: 'Configuração salva. O feed de todos os usuários já segue esta regra.' }),
+        onError: (error) =>
+          setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Não foi possível salvar.' }),
+      },
+    );
+  };
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <p className="section-label">Configuração</p>
+          <h1>Feed</h1>
+          <span>Defina como o conteúdo aparece no feed de todos os usuários.</span>
+        </div>
+        <div className="header-actions">
+          <button className="button secondary" type="button" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={isFetching ? 'spin' : ''} size={16} />
+            Atualizar
+          </button>
+        </div>
+      </header>
+
+      <section className="content">
+        <div className="inline-alert">
+          <Rss size={18} />
+          {canEdit
+            ? 'A regra escolhida aqui é aplicada em tempo real ao feed de todos os usuários do app, sem novo deploy.'
+            : 'Seu papel permite consultar esta configuração, mas somente administradores podem alterá-la.'}
+        </div>
+
+        {isLoading ? (
+          <div className="skeleton staff-skeleton" />
+        ) : isError ? (
+          <div className="inline-alert danger" role="alert">
+            <AlertTriangle size={18} />
+            Não foi possível carregar a configuração do feed. Verifique se a migration do feed foi aplicada.
+          </div>
+        ) : (
+          <form className="staff-form feed-form" onSubmit={save}>
+            <fieldset className="feed-mode" disabled={!canEdit}>
+              <legend>Modo do feed</legend>
+              <label className={`feed-mode-option ${mode === 'algorithm' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="feed-mode"
+                  value="algorithm"
+                  checked={mode === 'algorithm'}
+                  onChange={() => setMode('algorithm')}
+                />
+                <Sparkles size={18} />
+                <div>
+                  <strong>Algoritmo personalizado</strong>
+                  <span>Ranking por afinidade, retenção, engajamento, novidade e exploração, com diversidade.</span>
+                </div>
+              </label>
+              <label className={`feed-mode-option ${mode === 'random' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="feed-mode"
+                  value="random"
+                  checked={mode === 'random'}
+                  onChange={() => setMode('random')}
+                />
+                <Shuffle size={18} />
+                <div>
+                  <strong>Aleatório</strong>
+                  <span>Mostra todo o conteúdo elegível em ordem aleatória, ignorando o ranking.</span>
+                </div>
+              </label>
+            </fieldset>
+
+            {mode === 'algorithm' && (
+              <>
+                <div className="feed-section-head">
+                  <SlidersHorizontal size={18} />
+                  <div>
+                    <h2>Pesos do ranking</h2>
+                    <p>
+                      Quanto cada sinal contribui para a posição do post. Soma atual dos pesos:{' '}
+                      <strong>{formatDecimal(weightSum)}</strong> (o clássico soma 1, mas valores livres funcionam).
+                    </p>
+                  </div>
+                </div>
+                <div className="feed-grid">
+                  {feedWeightFields.map((field) => (
+                    <FeedField
+                      key={field.key}
+                      descriptor={field}
+                      value={values[field.key]}
+                      disabled={!canEdit}
+                      onChange={(raw) => setField(field.key, raw)}
+                      onBlurFormat={() => formatField(field.key)}
+                    />
+                  ))}
+                </div>
+
+                <div className="feed-section-head">
+                  <SlidersHorizontal size={18} />
+                  <div>
+                    <h2>Penalidades e diversidade</h2>
+                    <p>Descontos que evitam repetição e conteúdo já visto.</p>
+                  </div>
+                </div>
+                <div className="feed-grid">
+                  {feedTuningFields.map((field) => (
+                    <FeedField
+                      key={field.key}
+                      descriptor={field}
+                      value={values[field.key]}
+                      disabled={!canEdit}
+                      onChange={(raw) => setField(field.key, raw)}
+                      onBlurFormat={() => formatField(field.key)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {canEdit && (
+              <div className="feed-actions">
+                {mode === 'algorithm' && (
+                  <button className="button secondary" type="button" onClick={restoreDefaults}>
+                    <RefreshCw size={16} />
+                    Restaurar padrões
+                  </button>
+                )}
+                <button
+                  className="button primary"
+                  type="submit"
+                  disabled={updateMutation.isPending || (mode === 'algorithm' && hasInvalid)}
+                >
+                  {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <CheckCircle2 size={16} />}
+                  Salvar configuração
+                </button>
+              </div>
+            )}
+
+            {message && (
+              <div className={`inline-alert ${message.type === 'error' ? 'danger' : ''}`} role="status">
+                {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+                {message.text}
+              </div>
+            )}
+          </form>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -1242,6 +1580,7 @@ function AppShell() {
           <AppLogo />
         </header>
         {activeSection === 'dashboard' && <Dashboard />}
+        {activeSection === 'feed' && <FeedAlgorithmPage />}
         {activeSection === 'offering-types' && <OfferingTypesPage />}
         {activeSection === 'finance' && <FinancePage />}
         {activeSection === 'users' && <UsersPage />}
