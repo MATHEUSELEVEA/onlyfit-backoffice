@@ -29,6 +29,7 @@ import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
 import { useOfferingTypeBilling, useUpdateOfferingTypeBilling } from './hooks/useOfferingTypeBilling';
+import { usePlatformPaymentSettings, useUpdatePlatformPaymentSettings } from './hooks/usePlatformPaymentSettings';
 import { usePlatformStaff } from './hooks/usePlatformStaff';
 import {
   useCreatePlatformStaff,
@@ -48,13 +49,13 @@ import {
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
+  { id: 'finance', label: 'Financeiro', icon: CreditCard },
   { id: 'users', label: 'Equipe', icon: Users },
-  { label: 'Financeiro', icon: CreditCard, disabled: true },
   { label: 'Moderação', icon: Shield, disabled: true },
   { label: 'Alertas', icon: Bell, disabled: true },
 ] as const;
 
-type SectionId = 'dashboard' | 'offering-types' | 'users';
+type SectionId = 'dashboard' | 'offering-types' | 'finance' | 'users';
 
 const billingTypeOptions: ReadonlyArray<{ value: BillingType; label: string }> = [
   { value: 'one_time', label: 'Pagamento único' },
@@ -269,16 +270,35 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
   const [billingType, setBillingType] = useState<BillingType>(item.billing_type);
   const [billingInterval, setBillingInterval] = useState<BillingInterval | null>(item.billing_interval);
   const [minimumPriceInput, setMinimumPriceInput] = useState(() => formatPriceInput(item.minimum_price));
+  const [feePercentInput, setFeePercentInput] = useState(() => formatPriceInput(item.platform_fee_percent));
+  const [feeFixedInput, setFeeFixedInput] = useState(() => formatPriceInput(item.platform_fee_fixed));
   const [message, setMessage] = useState('');
 
+  const isFree = billingType === 'free';
+  const isRecurring = billingType === 'recurring';
+  // Recorrente usa só percentual (split); único aceita % e/ou fixo; free zera tudo.
+  const feeFixedApplies = billingType === 'one_time';
+
   const parsedMinimumPrice = parseCurrencyInput(minimumPriceInput);
-  const minimumPrice = billingType === 'free' ? 0 : parsedMinimumPrice;
+  const minimumPrice = isFree ? 0 : parsedMinimumPrice;
   const isMinimumPriceInvalid = minimumPrice === null || minimumPrice < 0;
+
+  const parsedFeePercent = parseCurrencyInput(feePercentInput);
+  const feePercent = isFree ? 0 : parsedFeePercent;
+  const isFeePercentInvalid = feePercent === null || feePercent < 0 || feePercent > 100;
+
+  const parsedFeeFixed = parseCurrencyInput(feeFixedInput);
+  const feeFixed = feeFixedApplies ? parsedFeeFixed : 0;
+  const isFeeFixedInvalid = feeFixed === null || feeFixed < 0;
+
   const dirty =
     billingType !== item.billing_type ||
     billingInterval !== item.billing_interval ||
-    Math.round((minimumPrice ?? -1) * 100) !== Math.round(item.minimum_price * 100);
-  const isRecurring = billingType === 'recurring';
+    Math.round((minimumPrice ?? -1) * 100) !== Math.round(item.minimum_price * 100) ||
+    Math.round((feePercent ?? -1) * 100) !== Math.round(item.platform_fee_percent * 100) ||
+    Math.round((feeFixed ?? -1) * 100) !== Math.round(item.platform_fee_fixed * 100);
+
+  const hasInvalid = isMinimumPriceInvalid || isFeePercentInvalid || isFeeFixedInvalid;
 
   const save = () => {
     const nextInterval = billingType === 'recurring' ? billingInterval ?? 'month' : null;
@@ -287,8 +307,23 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
       setMessage('Informe um valor mínimo válido.');
       return;
     }
+    if (feePercent === null || isFeePercentInvalid) {
+      setMessage('Informe uma taxa percentual entre 0 e 100.');
+      return;
+    }
+    if (feeFixed === null || isFeeFixedInvalid) {
+      setMessage('Informe uma taxa fixa válida.');
+      return;
+    }
     updateMutation.mutate(
-      { slug: item.slug, billingType, billingInterval: nextInterval, minimumPrice },
+      {
+        slug: item.slug,
+        billingType,
+        billingInterval: nextInterval,
+        minimumPrice,
+        platformFeePercent: feePercent,
+        platformFeeFixed: feeFixed,
+      },
       {
         onSuccess: () => setMessage('Configuração salva. Ofertas ativas deste tipo foram sincronizadas.'),
         onError: (error) => setMessage(error instanceof Error ? error.message : 'Não foi possível salvar.'),
@@ -322,7 +357,12 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
               setBillingType(next);
               if (next !== 'recurring') setBillingInterval(null);
               if (next === 'recurring' && !billingInterval) setBillingInterval('month');
-              if (next === 'free') setMinimumPriceInput(formatPriceInput(0));
+              if (next === 'free') {
+                setMinimumPriceInput(formatPriceInput(0));
+                setFeePercentInput(formatPriceInput(0));
+                setFeeFixedInput(formatPriceInput(0));
+              }
+              if (next === 'recurring') setFeeFixedInput(formatPriceInput(0));
             }}
           >
             {billingTypeOptions.map((option) => (
@@ -348,7 +388,7 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
           <span>Valor mínimo</span>
           <input
             value={minimumPriceInput}
-            disabled={!canEdit || billingType === 'free'}
+            disabled={!canEdit || isFree}
             inputMode="decimal"
             aria-invalid={isMinimumPriceInvalid}
             onBlur={() => {
@@ -360,10 +400,43 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
           />
         </label>
 
+        <label>
+          <span>Taxa (%)</span>
+          <input
+            value={feePercentInput}
+            disabled={!canEdit || isFree}
+            inputMode="decimal"
+            aria-invalid={isFeePercentInvalid}
+            onBlur={() => {
+              if (feePercent !== null) setFeePercentInput(formatPriceInput(feePercent));
+            }}
+            onChange={(event) => {
+              setFeePercentInput(event.target.value.replace(/[^\d.,]/g, ''));
+            }}
+          />
+        </label>
+
+        <label>
+          <span>Taxa fixa (R$)</span>
+          <input
+            value={feeFixedInput}
+            disabled={!canEdit || !feeFixedApplies}
+            inputMode="decimal"
+            aria-invalid={isFeeFixedInvalid}
+            title={feeFixedApplies ? undefined : 'A taxa fixa só se aplica a pagamento único.'}
+            onBlur={() => {
+              if (feeFixed !== null) setFeeFixedInput(formatPriceInput(feeFixed));
+            }}
+            onChange={(event) => {
+              setFeeFixedInput(event.target.value.replace(/[^\d.,]/g, ''));
+            }}
+          />
+        </label>
+
         <button
           className="button secondary"
           type="button"
-          disabled={!canEdit || !dirty || isMinimumPriceInvalid || updateMutation.isPending}
+          disabled={!canEdit || !dirty || hasInvalid || updateMutation.isPending}
           onClick={save}
         >
           {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <HandCoins size={16} />}
@@ -374,7 +447,13 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
       <p className="billing-summary">
         Profissional verá: <strong>{billingTypeLabel(billingType)}</strong>
         {billingType === 'recurring' ? `, ${billingIntervalLabel(billingInterval ?? 'month').toLowerCase()}` : ''}
-        {billingType !== 'free' ? `, mínimo ${formatCurrencyExact(minimumPrice ?? 0)}` : ', sem cobrança'}.
+        {isFree ? ', sem cobrança' : `, mínimo ${formatCurrencyExact(minimumPrice ?? 0)}`}
+        {!isFree && (
+          <>
+            {'. '}Comissão da plataforma: <strong>{formatPriceInput(feePercent ?? 0)}%</strong>
+            {feeFixedApplies && (feeFixed ?? 0) > 0 ? ` + ${formatCurrencyExact(feeFixed ?? 0)}` : ''} sobre o líquido.
+          </>
+        )}
       </p>
       {message && <p className="row-message" role="status">{message}</p>}
     </article>
@@ -424,6 +503,178 @@ function OfferingTypesPage() {
             {data.map((item) => <OfferingTypeBillingRow key={item.slug} item={item} canEdit={canEdit} />)}
           </div>
         )}
+      </section>
+    </>
+  );
+}
+
+function parseIntInput(value: string): number | null {
+  const normalized = value.trim();
+  if (normalized === '') return null;
+  const parsed = Number(normalized);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function PaymentSettingsForm({
+  settings,
+  canEdit,
+}: {
+  settings: { payout_processing_hours: number; payout_minimum_amount: number; card_settlement_days: number };
+  canEdit: boolean;
+}) {
+  const updateMutation = useUpdatePlatformPaymentSettings();
+  const [hoursInput, setHoursInput] = useState(() => String(settings.payout_processing_hours));
+  const [minimumInput, setMinimumInput] = useState(() => formatPriceInput(settings.payout_minimum_amount));
+  const [settlementInput, setSettlementInput] = useState(() => String(settings.card_settlement_days));
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const hours = parseIntInput(hoursInput);
+  const minimum = parseCurrencyInput(minimumInput);
+  const settlement = parseIntInput(settlementInput);
+
+  const isHoursInvalid = hours === null;
+  const isMinimumInvalid = minimum === null || minimum < 0;
+  const isSettlementInvalid = settlement === null;
+  const hasInvalid = isHoursInvalid || isMinimumInvalid || isSettlementInvalid;
+
+  const dirty =
+    (hours ?? -1) !== settings.payout_processing_hours ||
+    Math.round((minimum ?? -1) * 100) !== Math.round(settings.payout_minimum_amount * 100) ||
+    (settlement ?? -1) !== settings.card_settlement_days;
+
+  const save = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null);
+    if (hours === null || minimum === null || settlement === null || hasInvalid) {
+      setMessage({ type: 'error', text: 'Confira os valores: horas e dias devem ser inteiros positivos.' });
+      return;
+    }
+    updateMutation.mutate(
+      { payoutProcessingHours: hours, payoutMinimumAmount: minimum, cardSettlementDays: settlement },
+      {
+        onSuccess: () => setMessage({ type: 'success', text: 'Parâmetros de pagamento atualizados.' }),
+        onError: (error) =>
+          setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Não foi possível salvar.' }),
+      },
+    );
+  };
+
+  return (
+    <section className="staff-create-panel" aria-labelledby="payment-settings-title">
+      <div className="staff-create-copy">
+        <Gauge size={20} />
+        <div>
+          <h2 id="payment-settings-title">Parâmetros de pagamento</h2>
+          <p>Regras globais usadas quando o fluxo de pagamentos estiver ativo. Só administradores alteram.</p>
+        </div>
+      </div>
+
+      <form className="staff-form" onSubmit={save}>
+        <label>
+          <span>Prazo de processamento de resgate (horas úteis)</span>
+          <input
+            value={hoursInput}
+            disabled={!canEdit}
+            inputMode="numeric"
+            aria-invalid={isHoursInvalid}
+            onChange={(event) => setHoursInput(event.target.value.replace(/[^\d]/g, ''))}
+          />
+          <small>Tempo-alvo entre a solicitação e o envio do resgate (padrão 48).</small>
+        </label>
+        <label>
+          <span>Valor mínimo de resgate (R$)</span>
+          <input
+            value={minimumInput}
+            disabled={!canEdit}
+            inputMode="decimal"
+            aria-invalid={isMinimumInvalid}
+            onBlur={() => {
+              if (minimum !== null) setMinimumInput(formatPriceInput(minimum));
+            }}
+            onChange={(event) => setMinimumInput(event.target.value.replace(/[^\d.,]/g, ''))}
+          />
+          <small>0 permite resgatar qualquer valor disponível.</small>
+        </label>
+        <label>
+          <span>Janela de liquidação de cartão (dias)</span>
+          <input
+            value={settlementInput}
+            disabled={!canEdit}
+            inputMode="numeric"
+            aria-invalid={isSettlementInvalid}
+            onChange={(event) => setSettlementInput(event.target.value.replace(/[^\d]/g, ''))}
+          />
+          <small>Prazo informativo exibido ao profissional (padrão 32).</small>
+        </label>
+        {canEdit && (
+          <button className="button primary" type="submit" disabled={!dirty || hasInvalid || updateMutation.isPending}>
+            {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <CheckCircle2 size={16} />}
+            Salvar parâmetros
+          </button>
+        )}
+      </form>
+
+      {message && (
+        <div className={`inline-alert ${message.type === 'error' ? 'danger' : ''}`} role="status">
+          {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+          {message.text}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FinancePage() {
+  const { data: currentRole } = useCurrentStaffRole();
+  const canEdit = currentRole === 'super_admin' || currentRole === 'admin';
+  const { data, isLoading, isError, refetch, isFetching } = usePlatformPaymentSettings(true);
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <p className="section-label">Financeiro</p>
+          <h1>Pagamentos e resgates</h1>
+          <span>Parâmetros globais de pagamento e a fila de aprovação de resgates dos profissionais.</span>
+        </div>
+        <div className="header-actions">
+          <button className="button secondary" type="button" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={isFetching ? 'spin' : ''} size={16} />
+            Atualizar
+          </button>
+        </div>
+      </header>
+
+      <section className="content">
+        {isLoading ? (
+          <div className="skeleton staff-skeleton" />
+        ) : isError ? (
+          <div className="inline-alert danger" role="alert">
+            <AlertTriangle size={18} />
+            Não foi possível carregar os parâmetros de pagamento.
+          </div>
+        ) : data ? (
+          <PaymentSettingsForm settings={data} canEdit={canEdit} />
+        ) : null}
+
+        <section className="staff-list-section" aria-labelledby="payout-queue-title">
+          <div className="section-heading">
+            <div>
+              <h2 id="payout-queue-title">Fila de resgates</h2>
+              <p>Aprovação dos pedidos de resgate via PIX (chave CPF) dos profissionais.</p>
+            </div>
+          </div>
+          <div className="access-panel inline-access" role="status">
+            <div className="status-icon"><HandCoins size={24} /></div>
+            <div>
+              <h2>Aguardando o fluxo de pagamentos</h2>
+              <p>
+                A fila de resgates aparece aqui assim que o modelo de custódia for definido e o recebimento
+                de pagamentos entrar em operação. A estrutura de auditoria e os parâmetros acima já estão prontos.
+              </p>
+            </div>
+          </div>
+        </section>
       </section>
     </>
   );
@@ -992,6 +1243,7 @@ function AppShell() {
         </header>
         {activeSection === 'dashboard' && <Dashboard />}
         {activeSection === 'offering-types' && <OfferingTypesPage />}
+        {activeSection === 'finance' && <FinancePage />}
         {activeSection === 'users' && <UsersPage />}
       </div>
     </div>

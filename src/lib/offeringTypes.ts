@@ -13,6 +13,8 @@ export type OfferingTypeBilling = {
   billing_type: BillingType;
   billing_interval: BillingInterval | null;
   minimum_price: number;
+  platform_fee_percent: number;
+  platform_fee_fixed: number;
   max_per_business: number | null;
   unique_per_owner_profile: boolean;
   requires_affinity_group: boolean;
@@ -49,6 +51,8 @@ function parseOfferingType(value: unknown): OfferingTypeBilling {
         ? row.billing_interval
         : null,
     minimum_price: numberFrom(row.minimum_price),
+    platform_fee_percent: numberFrom(row.platform_fee_percent),
+    platform_fee_fixed: numberFrom(row.platform_fee_fixed),
     max_per_business: row.max_per_business === null || row.max_per_business === undefined ? null : numberFrom(row.max_per_business),
     unique_per_owner_profile: row.unique_per_owner_profile === true,
     requires_affinity_group: row.requires_affinity_group === true,
@@ -68,12 +72,16 @@ export async function updateOfferingTypeBilling(input: {
   billingType: BillingType;
   billingInterval: BillingInterval | null;
   minimumPrice: number;
+  platformFeePercent: number;
+  platformFeeFixed: number;
 }): Promise<OfferingTypeBilling> {
   const { data, error } = await supabase.rpc('control_update_offering_type_billing', {
     p_slug: input.slug,
     p_billing_type: input.billingType,
     p_billing_interval: input.billingInterval,
     p_minimum_price: input.minimumPrice,
+    p_platform_fee_percent: input.platformFeePercent,
+    p_platform_fee_fixed: input.platformFeeFixed,
   });
   if (error) throw error;
   return parseOfferingType(data);
