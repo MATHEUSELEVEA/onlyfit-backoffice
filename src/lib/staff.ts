@@ -25,6 +25,18 @@ export type CreatePlatformStaffResult = {
   staff: PlatformStaffMember;
 };
 
+export type UpdatePlatformStaffInput = {
+  userId: string;
+  email: string;
+  fullName: string;
+  password: string;
+  role: StaffRole;
+};
+
+export type UpdatePlatformStaffResult = {
+  staff: PlatformStaffMember;
+};
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -40,6 +52,21 @@ function parseStaffMember(value: unknown): PlatformStaffMember {
     full_name: typeof row.full_name === 'string' ? row.full_name : null,
     username: typeof row.username === 'string' ? row.username : null,
   };
+}
+
+async function throwFunctionError(error: unknown): Promise<never> {
+  const context = (error as { context?: Response }).context;
+  if (context) {
+    try {
+      const body = asRecord(await context.json());
+      if (body.error) throw new Error(String(body.error));
+    } catch (contextError) {
+      if (contextError instanceof Error && contextError.message !== 'Unexpected end of JSON input') {
+        throw contextError;
+      }
+    }
+  }
+  throw error;
 }
 
 export async function fetchCurrentStaffRole(): Promise<StaffRole | null> {
@@ -63,20 +90,7 @@ export async function createPlatformStaff(input: CreatePlatformStaffInput): Prom
       role: input.role,
     },
   });
-  if (error) {
-    const context = (error as { context?: Response }).context;
-    if (context) {
-      try {
-        const body = asRecord(await context.json());
-        if (body.error) throw new Error(String(body.error));
-      } catch (contextError) {
-        if (contextError instanceof Error && contextError.message !== 'Unexpected end of JSON input') {
-          throw contextError;
-        }
-      }
-    }
-    throw error;
-  }
+  if (error) return throwFunctionError(error);
 
   const result = asRecord(data);
   if (result.error) throw new Error(String(result.error));
@@ -85,4 +99,22 @@ export async function createPlatformStaff(input: CreatePlatformStaffInput): Prom
     staffStatus: result.staff_status === 'already_staff' ? 'already_staff' : 'created',
     staff: parseStaffMember(result.staff),
   };
+}
+
+export async function updatePlatformStaff(input: UpdatePlatformStaffInput): Promise<UpdatePlatformStaffResult> {
+  const { data, error } = await supabase.functions.invoke('control-platform-staff', {
+    method: 'PATCH',
+    body: {
+      user_id: input.userId,
+      email: input.email.trim().toLowerCase(),
+      full_name: input.fullName.trim(),
+      password: input.password,
+      role: input.role,
+    },
+  });
+  if (error) return throwFunctionError(error);
+
+  const result = asRecord(data);
+  if (result.error) throw new Error(String(result.error));
+  return { staff: parseStaffMember(result.staff) };
 }

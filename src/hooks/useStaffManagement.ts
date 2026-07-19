@@ -4,6 +4,7 @@ import {
   createPlatformStaff,
   fetchCurrentStaffRole,
   fetchPlatformStaff,
+  updatePlatformStaff,
 } from '../lib/staff';
 
 export function useCurrentStaffRole() {
@@ -30,6 +31,14 @@ export function useCreatePlatformStaff() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createPlatformStaff,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform_staff'] }),
+  });
+}
+
+export function useUpdatePlatformStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updatePlatformStaff,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform_staff'] }),
   });
 }

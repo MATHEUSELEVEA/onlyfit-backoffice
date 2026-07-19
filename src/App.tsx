@@ -13,7 +13,9 @@ import {
   LogOut,
   Menu,
   Moon,
+  Pencil,
   RefreshCw,
+  Save,
   Shield,
   UserPlus,
   Users,
@@ -28,8 +30,13 @@ import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
 import { useOfferingTypeBilling, useUpdateOfferingTypeBilling } from './hooks/useOfferingTypeBilling';
 import { usePlatformStaff } from './hooks/usePlatformStaff';
-import { useCreatePlatformStaff, useCurrentStaffRole, useStaffList } from './hooks/useStaffManagement';
-import type { StaffRole } from './lib/staff';
+import {
+  useCreatePlatformStaff,
+  useCurrentStaffRole,
+  useStaffList,
+  useUpdatePlatformStaff,
+} from './hooks/useStaffManagement';
+import type { PlatformStaffMember, StaffRole } from './lib/staff';
 import {
   billingIntervalLabel,
   billingTypeLabel,
@@ -625,12 +632,15 @@ function Dashboard() {
 function staffErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('weak_password')) {
-    return 'Para uma conta nova, use uma senha com maiúscula, minúscula, número e caractere especial.';
+    return 'Use uma senha com pelo menos 8 caracteres, maiúscula, minúscula, número e caractere especial.';
   }
-  if (message.includes('full_name_required')) return 'Informe o nome completo para criar uma conta nova.';
+  if (message.includes('full_name_required')) return 'Informe o nome completo.';
   if (message.includes('invalid_email')) return 'Informe um e-mail válido.';
-  if (message.includes('forbidden')) return 'Somente superadministradores podem incluir membros da equipe.';
-  return 'Não foi possível incluir o usuário. Verifique os dados e tente novamente.';
+  if (message.includes('email_already_exists')) return 'Este e-mail já pertence a outra conta da plataforma.';
+  if (message.includes('last_super_admin')) return 'O último superadministrador não pode perder esse papel.';
+  if (message.includes('staff_not_found')) return 'Este acesso interno não existe mais. Atualize a lista.';
+  if (message.includes('forbidden')) return 'Somente superadministradores podem gerenciar a equipe.';
+  return 'Não foi possível salvar o usuário. Verifique os dados e tente novamente.';
 }
 
 function UsersPage() {
@@ -638,11 +648,34 @@ function UsersPage() {
   const canManage = currentRole === 'super_admin';
   const { data: staff = [], isLoading, isError, refetch, isFetching } = useStaffList(canManage);
   const createMutation = useCreatePlatformStaff();
+  const updateMutation = useUpdatePlatformStaff();
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<StaffRole>('support');
+  const [editingMember, setEditingMember] = useState<PlatformStaffMember | null>(null);
+  const [editEmail, setEditEmail] = useState('');
+  const [editFullName, setEditFullName] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editPasswordConfirmation, setEditPasswordConfirmation] = useState('');
+  const [editRole, setEditRole] = useState<StaffRole>('support');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const startEditing = (member: PlatformStaffMember) => {
+    setEditingMember(member);
+    setEditEmail(member.email ?? '');
+    setEditFullName(member.full_name ?? member.username ?? '');
+    setEditPassword('');
+    setEditPasswordConfirmation('');
+    setEditRole(member.role);
+    setMessage(null);
+  };
+
+  const stopEditing = () => {
+    setEditingMember(null);
+    setEditPassword('');
+    setEditPasswordConfirmation('');
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -661,6 +694,33 @@ function UsersPage() {
           setFullName('');
           setPassword('');
           setRole('support');
+        },
+        onError: (error) => setMessage({ type: 'error', text: staffErrorMessage(error) }),
+      },
+    );
+  };
+
+  const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingMember) return;
+    setMessage(null);
+    if (editPassword !== editPasswordConfirmation) {
+      setMessage({ type: 'error', text: 'A confirmação não corresponde à nova senha.' });
+      return;
+    }
+
+    updateMutation.mutate(
+      {
+        userId: editingMember.user_id,
+        email: editEmail,
+        fullName: editFullName,
+        password: editPassword,
+        role: editRole,
+      },
+      {
+        onSuccess: () => {
+          stopEditing();
+          setMessage({ type: 'success', text: 'Dados e acesso do usuário atualizados.' });
         },
         onError: (error) => setMessage({ type: 'error', text: staffErrorMessage(error) }),
       },
@@ -751,13 +811,89 @@ function UsersPage() {
                 </button>
               </form>
 
-              {message && (
-                <div className={`inline-alert ${message.type === 'error' ? 'danger' : ''}`} role="status">
-                  {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
-                  {message.text}
-                </div>
-              )}
             </section>
+
+            {message && (
+              <div className={`inline-alert ${message.type === 'error' ? 'danger' : ''}`} role="status">
+                {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+                {message.text}
+              </div>
+            )}
+
+            {editingMember && (
+              <section className="staff-edit-panel" aria-labelledby="staff-edit-title">
+                <div className="staff-create-copy">
+                  <Pencil size={20} />
+                  <div>
+                    <h2 id="staff-edit-title">Editar acesso</h2>
+                    <p>Alterações no e-mail e na senha também atualizam o login da plataforma.</p>
+                  </div>
+                </div>
+
+                <form className="staff-form" onSubmit={handleEditSubmit}>
+                  <label>
+                    <span>E-mail de login</span>
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={editEmail}
+                      onChange={(event) => setEditEmail(event.target.value)}
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Nome completo</span>
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      value={editFullName}
+                      onChange={(event) => setEditFullName(event.target.value)}
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Papel no backoffice</span>
+                    <select value={editRole} onChange={(event) => setEditRole(event.target.value as StaffRole)}>
+                      {staffRoleOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                    <small>{staffRoleOptions.find((option) => option.value === editRole)?.description}</small>
+                  </label>
+                  <label>
+                    <span>Nova senha</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={editPassword}
+                      onChange={(event) => setEditPassword(event.target.value)}
+                      minLength={8}
+                    />
+                    <small>Deixe em branco para preservar a senha atual.</small>
+                  </label>
+                  <label>
+                    <span>Confirmar nova senha</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={editPasswordConfirmation}
+                      onChange={(event) => setEditPasswordConfirmation(event.target.value)}
+                      minLength={8}
+                    />
+                  </label>
+                  <div className="staff-form-actions">
+                    <button className="button primary" type="submit" disabled={updateMutation.isPending}>
+                      {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <Save size={16} />}
+                      Salvar alterações
+                    </button>
+                    <button className="button secondary" type="button" onClick={stopEditing} disabled={updateMutation.isPending}>
+                      <X size={16} />
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
 
             <section className="staff-list-section" aria-labelledby="staff-list-title">
               <div className="section-heading">
@@ -782,6 +918,7 @@ function UsersPage() {
                         <th>Pessoa</th>
                         <th>Papel interno</th>
                         <th>Incluído em</th>
+                        <th><span className="sr-only">Ações</span></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -793,6 +930,17 @@ function UsersPage() {
                           </td>
                           <td><span className={`role-badge role-${member.role}`}>{staffRoleLabel(member.role)}</span></td>
                           <td>{formatDateTime(new Date(member.created_at))}</td>
+                          <td className="staff-actions-cell">
+                            <button
+                              className="icon-button table-action"
+                              type="button"
+                              title={`Editar ${member.full_name || member.email || 'usuário'}`}
+                              aria-label={`Editar ${member.full_name || member.email || 'usuário'}`}
+                              onClick={() => startEditing(member)}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
