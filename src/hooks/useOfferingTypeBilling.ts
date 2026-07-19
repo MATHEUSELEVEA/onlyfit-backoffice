@@ -19,7 +19,12 @@ export function useUpdateOfferingTypeBilling() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: { slug: string; billingType: BillingType; billingInterval: BillingInterval | null }) =>
+    mutationFn: (input: {
+      slug: string;
+      billingType: BillingType;
+      billingInterval: BillingInterval | null;
+      minimumPrice: number;
+    }) =>
       updateOfferingTypeBilling(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['offering-type-billing'] });
