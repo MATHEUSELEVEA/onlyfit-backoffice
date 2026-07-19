@@ -24,6 +24,8 @@ export function useUpdateOfferingTypeBilling() {
       billingType: BillingType;
       billingInterval: BillingInterval | null;
       minimumPrice: number;
+      platformFeePercent: number;
+      platformFeeFixed: number;
     }) =>
       updateOfferingTypeBilling(input),
     onSuccess: () => {

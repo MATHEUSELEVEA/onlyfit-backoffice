@@ -545,9 +545,14 @@ svg text {
 
 .billing-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(112px, 0.85fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   align-items: end;
   gap: 10px;
+}
+
+.billing-controls button {
+  min-height: 44px;
+  white-space: nowrap;
 }
 
 .billing-controls label {
