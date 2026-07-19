@@ -136,6 +136,16 @@ select:focus-visible {
   color: rgb(var(--color-on-surface));
 }
 
+.sr-only {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .rotate {
   transform: rotate(180deg);
 }
@@ -594,6 +604,7 @@ svg text {
 }
 
 .staff-create-panel,
+.staff-edit-panel,
 .staff-list-section {
   display: flex;
   flex-direction: column;
@@ -673,6 +684,29 @@ svg text {
 .staff-form .button {
   align-self: end;
   justify-self: start;
+}
+
+.staff-form-actions {
+  display: flex;
+  align-self: end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.staff-actions-cell {
+  width: 64px;
+  text-align: right;
+}
+
+.table-action {
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.table-action:hover {
+  border-color: rgb(var(--color-outline-variant));
 }
 
 .section-heading {
@@ -968,6 +1002,10 @@ svg text {
   }
 
   .staff-form .button {
+    width: 100%;
+  }
+
+  .staff-form-actions {
     width: 100%;
   }
 
