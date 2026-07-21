@@ -9,11 +9,14 @@ import {
   Dumbbell,
   Gauge,
   HandCoins,
+  Heart,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   Menu,
   Moon,
   Pencil,
+  ReceiptText,
   RefreshCw,
   Rss,
   Save,
@@ -23,11 +26,12 @@ import {
   Sparkles,
   UserPlus,
   Users,
+  WalletCards,
   X,
 } from 'lucide-react';
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useAuth } from './contexts/useAuth';
-import type { WeeklyActivity } from './lib/dashboard';
+import type { WeeklyActivity, WeeklyFinance } from './lib/dashboard';
 import { formatCurrency, formatCurrencyExact, formatDateTime, formatNumber } from './lib/format';
 import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
@@ -1023,14 +1027,16 @@ function MetricCard({
   value,
   detail,
   icon: Icon,
+  tone = 'neutral',
 }: {
   title: string;
   value: string;
   detail: string;
   icon: typeof Activity;
+  tone?: 'neutral' | 'finance' | 'attention';
 }) {
   return (
-    <article className="metric-card">
+    <article className={`metric-card metric-${tone}`}>
       <div className="metric-title">
         <span>{title}</span>
         <Icon size={18} />
@@ -1041,55 +1047,182 @@ function MetricCard({
   );
 }
 
-function LineChart({ activity }: { activity: WeeklyActivity[] }) {
+function DashboardSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="dashboard-section">
+      <div className="dashboard-section-head">
+        <div>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function AppActivityChart({ activity }: { activity: WeeklyActivity[] }) {
   const width = 720;
   const height = 220;
-  const max = Math.max(1, ...activity.map((point) => point.completed_sessions));
+  const max = Math.max(
+    1,
+    ...activity.flatMap((point) => [
+      point.completed_sessions,
+      point.posts_created,
+      point.saves_created,
+      point.comments_created,
+    ]),
+  );
   const denominator = Math.max(1, activity.length - 1);
   const points = activity.map((point, index) => {
     const x = 24 + (index * (width - 48)) / denominator;
-    const y = height - 28 - (point.completed_sessions / max) * (height - 56);
     const date = new Date(`${point.date}T12:00:00`);
     return {
       ...point,
       label: new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(date).replace('.', ''),
       x,
-      y,
+      sessionsY: height - 28 - (point.completed_sessions / max) * (height - 56),
+      postsY: height - 28 - (point.posts_created / max) * (height - 56),
+      savesY: height - 28 - (point.saves_created / max) * (height - 56),
+      commentsY: height - 28 - (point.comments_created / max) * (height - 56),
     };
   });
-  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-  const total = activity.reduce((sum, point) => sum + point.completed_sessions, 0);
+  const pathFor = (key: 'sessionsY' | 'postsY' | 'savesY' | 'commentsY') => (
+    points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point[key]}`).join(' ')
+  );
+  const totals = activity.reduce(
+    (sum, point) => ({
+      completed_sessions: sum.completed_sessions + point.completed_sessions,
+      posts_created: sum.posts_created + point.posts_created,
+      saves_created: sum.saves_created + point.saves_created,
+      comments_created: sum.comments_created + point.comments_created,
+    }),
+    { completed_sessions: 0, posts_created: 0, saves_created: 0, comments_created: 0 },
+  );
+  const total = totals.completed_sessions + totals.posts_created + totals.saves_created + totals.comments_created;
 
   return (
     <figure className="chart-panel">
       <figcaption>
         <div>
           <strong>Atividade dos últimos 7 dias</strong>
-          <span>Treinos concluídos por dia</span>
+          <span>Treinos, posts, comentários e salvamentos por dia</span>
         </div>
         <div className="chart-total">
           <BarChart3 size={16} />
           <strong>{formatNumber(total)}</strong>
-          <span>no período</span>
+          <span>ações no período</span>
         </div>
       </figcaption>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Treinos concluídos nos últimos sete dias">
+      <div className="chart-legend" aria-label="Legenda do gráfico de atividade">
+        <span><i className="legend-workouts" />Treinos</span>
+        <span><i className="legend-posts" />Posts</span>
+        <span><i className="legend-comments" />Comentários</span>
+        <span><i className="legend-saves" />Salvos</span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Ações do app nos últimos sete dias">
         {[0, 1, 2, 3].map((line) => {
           const y = 28 + line * 44;
           return <line key={line} x1="24" x2={width - 24} y1={y} y2={y} className="grid-line" />;
         })}
-        {points.length > 0 && <path d={path} className="chart-line" />}
+        {points.length > 0 && (
+          <>
+            <path d={pathFor('sessionsY')} className="chart-line chart-line-workouts" />
+            <path d={pathFor('postsY')} className="chart-line chart-line-posts" />
+            <path d={pathFor('commentsY')} className="chart-line chart-line-comments" />
+            <path d={pathFor('savesY')} className="chart-line chart-line-saves" />
+          </>
+        )}
         {points.map((point) => (
           <g key={point.date}>
-            <circle cx={point.x} cy={point.y} r="4" className="chart-dot" />
-            <text x={point.x} y={Math.max(18, point.y - 12)} textAnchor="middle">{point.completed_sessions}</text>
+            <circle cx={point.x} cy={point.sessionsY} r="4" className="chart-dot chart-dot-workouts" />
             <text x={point.x} y={height - 8} textAnchor="middle">{point.label}</text>
           </g>
         ))}
       </svg>
       <div className="chart-values" aria-label="Valores diários">
         {points.map((point) => (
-          <span key={point.date}><small>{point.label}</small><strong>{formatNumber(point.completed_sessions)}</strong></span>
+          <span key={point.date}>
+            <small>{point.label}</small>
+            <strong>{formatNumber(point.completed_sessions + point.posts_created + point.comments_created + point.saves_created)}</strong>
+          </span>
+        ))}
+      </div>
+    </figure>
+  );
+}
+
+function FinanceChart({ finance }: { finance: WeeklyFinance[] }) {
+  const width = 720;
+  const height = 220;
+  const max = Math.max(1, ...finance.map((point) => point.gross_value));
+  const bars = finance.map((point, index) => {
+    const availableWidth = width - 48;
+    const slot = availableWidth / Math.max(1, finance.length);
+    const barWidth = Math.max(18, slot * 0.5);
+    const barHeight = (point.gross_value / max) * (height - 64);
+    const date = new Date(`${point.date}T12:00:00`);
+    return {
+      ...point,
+      label: new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(date).replace('.', ''),
+      x: 24 + index * slot + (slot - barWidth) / 2,
+      y: height - 28 - barHeight,
+      barWidth,
+      barHeight,
+    };
+  });
+  const total = finance.reduce((sum, point) => sum + point.gross_value, 0);
+
+  return (
+    <figure className="chart-panel">
+      <figcaption>
+        <div>
+          <strong>Receita confirmada nos últimos 7 dias</strong>
+          <span>Valor bruto por data de confirmação</span>
+        </div>
+        <div className="chart-total">
+          <ReceiptText size={16} />
+          <strong>{formatCurrency(total)}</strong>
+          <span>no período</span>
+        </div>
+      </figcaption>
+      {total === 0 ? (
+        <p className="empty-copy">Nenhuma transação financeira confirmada neste período.</p>
+      ) : (
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Receita confirmada nos últimos sete dias">
+          {[0, 1, 2, 3].map((line) => {
+            const y = 28 + line * 44;
+            return <line key={line} x1="24" x2={width - 24} y1={y} y2={y} className="grid-line" />;
+          })}
+          {bars.map((bar) => (
+            <g key={bar.date}>
+              <rect
+                className="finance-bar"
+                x={bar.x}
+                y={bar.y}
+                width={bar.barWidth}
+                height={Math.max(2, bar.barHeight)}
+                rx="6"
+              />
+              <text x={bar.x + bar.barWidth / 2} y={height - 8} textAnchor="middle">{bar.label}</text>
+            </g>
+          ))}
+        </svg>
+      )}
+      <div className="chart-values" aria-label="Valores financeiros diários">
+        {bars.map((bar) => (
+          <span key={bar.date}>
+            <small>{bar.label}</small>
+            <strong>{formatCurrency(bar.gross_value)}</strong>
+          </span>
         ))}
       </div>
     </figure>
@@ -1133,7 +1266,7 @@ function Dashboard() {
   const { data, isLoading, isError, refetch, isFetching } = useDashboardSnapshot(true);
   const outboxTotal = data ? Object.values(data.outbox).reduce((sum, value) => sum + value, 0) : 0;
 
-  const metrics = useMemo(
+  const appMetrics = useMemo(
     () => data ? [
       {
         title: 'Usuários totais',
@@ -1142,28 +1275,35 @@ function Dashboard() {
         icon: Users,
       },
       {
-        title: 'Receita no mês',
-        value: formatCurrency(data.payments.charges_paid_month_value),
-        detail: `${formatNumber(data.payments.charges_paid_month_count)} pagamentos confirmados`,
-        icon: CreditCard,
-      },
-      {
-        title: 'Pagamentos hoje',
-        value: formatCurrency(data.payments.charges_paid_today_value),
-        detail: `${formatNumber(data.payments.charges_paid_today_count)} cobranças pagas`,
-        icon: Gauge,
-      },
-      {
         title: 'Treinos hoje',
         value: formatNumber(data.overview.workout_sessions_completed_today),
-        detail: 'Sessões concluídas no dia',
+        detail: `${formatNumber(data.appActivity.workout_sessions_total)} sessões concluídas no histórico`,
         icon: Dumbbell,
+      },
+      {
+        title: 'Posts publicados',
+        value: formatNumber(data.appActivity.posts_total),
+        detail: `${formatNumber(data.appActivity.posts_published_today)} novos hoje`,
+        icon: Rss,
+      },
+      {
+        title: 'Curtidas',
+        value: formatNumber(data.appActivity.post_likes_total),
+        detail: 'Interações registradas em posts',
+        icon: Heart,
+      },
+      {
+        title: 'Comentários',
+        value: formatNumber(data.appActivity.post_comments_total),
+        detail: 'Conversas registradas no feed',
+        icon: MessageCircle,
       },
       {
         title: 'Denúncias pendentes',
         value: formatNumber(data.overview.pending_content_reports),
         detail: 'Fila de moderação aguardando triagem',
         icon: AlertTriangle,
+        tone: data.overview.pending_content_reports > 0 ? 'attention' as const : 'neutral' as const,
       },
       {
         title: 'Fila Pulse',
@@ -1173,6 +1313,54 @@ function Dashboard() {
       },
     ] : [],
     [data, outboxTotal],
+  );
+
+  const financeMetrics = useMemo(
+    () => data ? [
+      {
+        title: 'Receita acumulada',
+        value: formatCurrency(data.finance.gross_revenue_total),
+        detail: `${formatNumber(data.finance.transactions_total)} transações registradas`,
+        icon: CreditCard,
+        tone: 'finance' as const,
+      },
+      {
+        title: 'Receita no mês',
+        value: formatCurrency(data.finance.transactions_paid_month_value),
+        detail: `${formatNumber(data.finance.transactions_paid_month_count)} pagamentos confirmados`,
+        icon: ReceiptText,
+        tone: 'finance' as const,
+      },
+      {
+        title: 'Pagamentos hoje',
+        value: formatCurrency(data.finance.transactions_paid_today_value),
+        detail: `${formatNumber(data.finance.transactions_paid_today_count)} cobranças confirmadas`,
+        icon: Gauge,
+        tone: 'finance' as const,
+      },
+      {
+        title: 'Comissão acumulada',
+        value: formatCurrency(data.finance.platform_commission_total),
+        detail: 'Receita OnlyFit retida nas transações',
+        icon: WalletCards,
+        tone: 'finance' as const,
+      },
+      {
+        title: 'Assinaturas ativas',
+        value: formatNumber(data.finance.active_subscriptions_total),
+        detail: 'Recorrências vigentes na plataforma',
+        icon: Activity,
+        tone: 'finance' as const,
+      },
+      {
+        title: 'Liquidação pendente',
+        value: formatCurrency(data.finance.pending_settlement_value),
+        detail: 'Valor líquido ainda não liquidado',
+        icon: HandCoins,
+        tone: 'finance' as const,
+      },
+    ] : [],
+    [data],
   );
 
   return (
@@ -1193,23 +1381,53 @@ function Dashboard() {
 
       <section className="content">
         {isError && (
-          <div className="inline-alert danger" role="alert">
+          <div className="inline-alert soft" role="alert">
             <AlertTriangle size={18} />
-            Não foi possível consultar o banco. Nenhum valor substituto foi exibido. Atualize para tentar novamente.
+            O snapshot do dashboard não respondeu agora. Tente atualizar; quando uma fonte ainda não tiver dados, o painel mostra zero e uma mensagem no bloco correspondente.
           </div>
         )}
 
         {isLoading ? (
           <DashboardSkeleton />
         ) : data ? (
-          <div className="dashboard-grid">
-            {metrics.map((metric) => <MetricCard key={metric.title} {...metric} />)}
-          </div>
+          <>
+            {data.notes.length > 0 && (
+              <div className="inline-alert soft" role="status">
+                <AlertTriangle size={18} />
+                {data.notes.join(' ')}
+              </div>
+            )}
+
+            <DashboardSection
+              title="Ações no app"
+              description="Grandes números de uso, criação de conteúdo, engajamento e operação."
+            >
+              <div className="dashboard-grid">
+                {appMetrics.map((metric) => <MetricCard key={metric.title} {...metric} />)}
+              </div>
+            </DashboardSection>
+
+            <DashboardSection
+              title="Financeiro"
+              description="Valores acumulados e situação das cobranças processadas pela plataforma."
+            >
+              <div className="dashboard-grid">
+                {financeMetrics.map((metric) => <MetricCard key={metric.title} {...metric} />)}
+              </div>
+              {data.finance.transactions_total === 0 && (
+                <div className="inline-alert soft" role="status">
+                  <CreditCard size={18} />
+                  Nenhuma transação financeira foi registrada ainda. Os indicadores ficam zerados até a primeira cobrança confirmada.
+                </div>
+              )}
+            </DashboardSection>
+          </>
         ) : null}
 
         {data && (
           <div className="lower-grid">
-            <LineChart activity={data.weeklyActivity} />
+            <AppActivityChart activity={data.weeklyActivity} />
+            <FinanceChart finance={data.weeklyFinance} />
             <PulseStatusPanel outbox={data.outbox} />
           </div>
         )}
