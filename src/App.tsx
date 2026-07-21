@@ -492,7 +492,18 @@ type FeedFieldKey =
   | 'penaltyAlreadyWatched'
   | 'diversityCreatorPenalty'
   | 'diversityTopicPenalty'
-  | 'noveltyHalfLifeHours';
+  | 'noveltyHalfLifeHours'
+  | 'slotsInterest'
+  | 'slotsFollowed'
+  | 'slotsPopular'
+  | 'slotsExperimental';
+
+const feedSlotKeys: ReadonlyArray<FeedFieldKey> = [
+  'slotsInterest',
+  'slotsFollowed',
+  'slotsPopular',
+  'slotsExperimental',
+];
 
 type FeedFieldDescriptor = {
   key: FeedFieldKey;
@@ -517,6 +528,13 @@ const feedTuningFields: ReadonlyArray<FeedFieldDescriptor> = [
   { key: 'noveltyHalfLifeHours', label: 'Meia-vida da novidade (horas)', hint: 'Em quantas horas a novidade cai pela metade (padrão 24).', min: 0.1 },
 ];
 
+const feedSlotFields: ReadonlyArray<FeedFieldDescriptor> = [
+  { key: 'slotsInterest', label: 'Vagas — afinidade/interesse', hint: 'Posições por bloco reservadas a posts alinhados com o interesse do usuário (padrão 6).', min: 1 },
+  { key: 'slotsFollowed', label: 'Vagas — seguidos', hint: 'Posições por bloco reservadas a posts de quem o usuário segue (padrão 2).', min: 1 },
+  { key: 'slotsPopular', label: 'Vagas — popular', hint: 'Posições por bloco reservadas a posts com engajamento alto (padrão 1).', min: 1 },
+  { key: 'slotsExperimental', label: 'Vagas — experimental', hint: 'Posições por bloco reservadas a descoberta fora do padrão do usuário (padrão 1).', min: 1 },
+];
+
 const feedDefaults: Record<FeedFieldKey, number> = {
   weightAffinity: 0.4,
   weightRetention: 0.3,
@@ -528,6 +546,10 @@ const feedDefaults: Record<FeedFieldKey, number> = {
   diversityCreatorPenalty: 0.12,
   diversityTopicPenalty: 0.04,
   noveltyHalfLifeHours: 24,
+  slotsInterest: 6,
+  slotsFollowed: 2,
+  slotsPopular: 1,
+  slotsExperimental: 1,
 };
 
 function FeedField({
@@ -592,6 +614,10 @@ function FeedAlgorithmPage() {
       diversityCreatorPenalty: formatDecimal(settings.diversity_creator_penalty),
       diversityTopicPenalty: formatDecimal(settings.diversity_topic_penalty),
       noveltyHalfLifeHours: formatDecimal(settings.novelty_half_life_hours),
+      slotsInterest: formatDecimal(settings.slots_interest, 0),
+      slotsFollowed: formatDecimal(settings.slots_followed, 0),
+      slotsPopular: formatDecimal(settings.slots_popular, 0),
+      slotsExperimental: formatDecimal(settings.slots_experimental, 0),
     });
     setHydratedFor(stamp);
   }
@@ -605,10 +631,14 @@ function FeedAlgorithmPage() {
   }, [values]);
 
   const weightSum = feedWeightFields.reduce((sum, field) => sum + (parsedValues[field.key] ?? 0), 0);
+  const blockSize = feedSlotKeys.reduce((sum, key) => sum + (parsedValues[key] ?? 0), 0);
   const hasInvalid = (Object.keys(feedDefaults) as FeedFieldKey[]).some((key) => {
     const parsed = parsedValues[key];
-    const min = key === 'noveltyHalfLifeHours' ? 0.1 : 0;
-    return parsed === null || parsed < min;
+    const isSlot = (feedSlotKeys as ReadonlyArray<FeedFieldKey>).includes(key);
+    const min = key === 'noveltyHalfLifeHours' ? 0.1 : isSlot ? 1 : 0;
+    if (parsed === null || parsed < min) return true;
+    if (isSlot && !Number.isInteger(parsed)) return true;
+    return false;
   });
 
   const setField = (key: FeedFieldKey, raw: string) => {
@@ -632,7 +662,7 @@ function FeedAlgorithmPage() {
     event.preventDefault();
     setMessage(null);
     if (mode === 'algorithm' && hasInvalid) {
-      setMessage({ type: 'error', text: 'Confira os valores: pesos não podem ser negativos e a meia-vida deve ser positiva.' });
+      setMessage({ type: 'error', text: 'Confira os valores: pesos não podem ser negativos, a meia-vida deve ser positiva e as vagas por bucket devem ser números inteiros a partir de 1.' });
       return;
     }
     updateMutation.mutate(
@@ -648,6 +678,10 @@ function FeedAlgorithmPage() {
         diversityCreatorPenalty: parsedValues.diversityCreatorPenalty ?? feedDefaults.diversityCreatorPenalty,
         diversityTopicPenalty: parsedValues.diversityTopicPenalty ?? feedDefaults.diversityTopicPenalty,
         noveltyHalfLifeHours: parsedValues.noveltyHalfLifeHours ?? feedDefaults.noveltyHalfLifeHours,
+        slotsInterest: parsedValues.slotsInterest ?? feedDefaults.slotsInterest,
+        slotsFollowed: parsedValues.slotsFollowed ?? feedDefaults.slotsFollowed,
+        slotsPopular: parsedValues.slotsPopular ?? feedDefaults.slotsPopular,
+        slotsExperimental: parsedValues.slotsExperimental ?? feedDefaults.slotsExperimental,
       },
       {
         onSuccess: () =>
@@ -757,6 +791,31 @@ function FeedAlgorithmPage() {
                 </div>
                 <div className="feed-grid">
                   {feedTuningFields.map((field) => (
+                    <FeedField
+                      key={field.key}
+                      descriptor={field}
+                      value={values[field.key]}
+                      disabled={!canEdit}
+                      onChange={(raw) => setField(field.key, raw)}
+                      onBlurFormat={() => formatField(field.key)}
+                    />
+                  ))}
+                </div>
+
+                <div className="feed-section-head">
+                  <SlidersHorizontal size={18} />
+                  <div>
+                    <h2>Distribuição de slots</h2>
+                    <p>
+                      Quantas posições de cada critério entram por bloco de conteúdo. Bloco atual:{' '}
+                      <strong>{blockSize || '—'}</strong> posts, sendo {values.slotsInterest || '—'} de afinidade,{' '}
+                      {values.slotsFollowed || '—'} de seguidos, {values.slotsPopular || '—'} de popular e{' '}
+                      {values.slotsExperimental || '—'} experimental.
+                    </p>
+                  </div>
+                </div>
+                <div className="feed-grid">
+                  {feedSlotFields.map((field) => (
                     <FeedField
                       key={field.key}
                       descriptor={field}
