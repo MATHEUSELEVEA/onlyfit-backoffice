@@ -14,6 +14,10 @@ export type FeedAlgorithmSettings = {
   diversity_creator_penalty: number;
   diversity_topic_penalty: number;
   novelty_half_life_hours: number;
+  slots_interest: number;
+  slots_followed: number;
+  slots_popular: number;
+  slots_experimental: number;
   updated_at: string | null;
 };
 
@@ -29,6 +33,10 @@ export type FeedAlgorithmInput = {
   diversityCreatorPenalty: number;
   diversityTopicPenalty: number;
   noveltyHalfLifeHours: number;
+  slotsInterest: number;
+  slotsFollowed: number;
+  slotsPopular: number;
+  slotsExperimental: number;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -39,6 +47,11 @@ function numberFrom(value: unknown): number {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') return Number(value) || 0;
   return 0;
+}
+
+function intFrom(value: unknown, fallback: number): number {
+  const parsed = numberFrom(value);
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.round(parsed) : fallback;
 }
 
 function parseSettings(value: unknown): FeedAlgorithmSettings {
@@ -55,6 +68,10 @@ function parseSettings(value: unknown): FeedAlgorithmSettings {
     diversity_creator_penalty: numberFrom(row.diversity_creator_penalty),
     diversity_topic_penalty: numberFrom(row.diversity_topic_penalty),
     novelty_half_life_hours: numberFrom(row.novelty_half_life_hours),
+    slots_interest: intFrom(row.slots_interest, 6),
+    slots_followed: intFrom(row.slots_followed, 2),
+    slots_popular: intFrom(row.slots_popular, 1),
+    slots_experimental: intFrom(row.slots_experimental, 1),
     updated_at: typeof row.updated_at === 'string' ? row.updated_at : null,
   };
 }
@@ -78,6 +95,10 @@ export async function updateFeedAlgorithmSettings(input: FeedAlgorithmInput): Pr
     p_diversity_creator_penalty: input.diversityCreatorPenalty,
     p_diversity_topic_penalty: input.diversityTopicPenalty,
     p_novelty_half_life_hours: input.noveltyHalfLifeHours,
+    p_slots_interest: input.slotsInterest,
+    p_slots_followed: input.slotsFollowed,
+    p_slots_popular: input.slotsPopular,
+    p_slots_experimental: input.slotsExperimental,
   });
   if (error) throw error;
   return parseSettings(data);
