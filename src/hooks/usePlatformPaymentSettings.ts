@@ -18,6 +18,7 @@ export function useUpdatePlatformPaymentSettings() {
       payoutProcessingHours: number;
       payoutMinimumAmount: number;
       cardSettlementDays: number;
+      settlementWeekdays: number[];
     }) => updatePlatformPaymentSettings(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['platform-payment-settings'] });

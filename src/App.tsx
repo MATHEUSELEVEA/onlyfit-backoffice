@@ -33,7 +33,7 @@ import { FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useAuth } from './contexts/useAuth';
 import type { WeeklyActivity, WeeklyFinance } from './lib/dashboard';
 import { formatCurrency, formatCurrencyExact, formatDateTime, formatNumber } from './lib/format';
-import { PayoutQueuePanel, TransactionsPanel, AsaasIntegrationPanel } from './components/FinancePanels';
+import { PayoutQueuePanel, TransactionsPanel, AsaasIntegrationPanel, FinancialReconciliationPanel } from './components/FinancePanels';
 import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
@@ -72,7 +72,6 @@ type SectionId = 'dashboard' | 'feed' | 'offering-types' | 'finance' | 'users';
 const billingTypeOptions: ReadonlyArray<{ value: BillingType; label: string }> = [
   { value: 'one_time', label: 'Pagamento único' },
   { value: 'recurring', label: 'Recorrente' },
-  { value: 'free', label: 'Sem cobrança' },
 ];
 
 const billingIntervalOptions: ReadonlyArray<{ value: BillingInterval; label: string }> = [
@@ -81,6 +80,16 @@ const billingIntervalOptions: ReadonlyArray<{ value: BillingInterval; label: str
   { value: 'quarter', label: 'Trimestral' },
   { value: 'semester', label: 'Semestral' },
   { value: 'year', label: 'Anual' },
+];
+
+const settlementWeekdayOptions: ReadonlyArray<{ value: number; label: string }> = [
+  { value: 1, label: 'Seg' },
+  { value: 2, label: 'Ter' },
+  { value: 3, label: 'Qua' },
+  { value: 4, label: 'Qui' },
+  { value: 5, label: 'Sex' },
+  { value: 6, label: 'Sáb' },
+  { value: 7, label: 'Dom' },
 ];
 
 const staffRoleOptions: ReadonlyArray<{ value: StaffRole; label: string; description: string }> = [
@@ -286,17 +295,16 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
   const [feeFixedInput, setFeeFixedInput] = useState(() => formatPriceInput(item.platform_fee_fixed));
   const [message, setMessage] = useState('');
 
-  const isFree = billingType === 'free';
   const isRecurring = billingType === 'recurring';
-  // Recorrente usa só percentual (split); único aceita % e/ou fixo; free zera tudo.
+  // Recorrente usa só percentual; único aceita % e/ou fixo.
   const feeFixedApplies = billingType === 'one_time';
 
   const parsedMinimumPrice = parseCurrencyInput(minimumPriceInput);
-  const minimumPrice = isFree ? 0 : parsedMinimumPrice;
-  const isMinimumPriceInvalid = minimumPrice === null || minimumPrice < 0;
+  const minimumPrice = parsedMinimumPrice;
+  const isMinimumPriceInvalid = minimumPrice === null || minimumPrice <= 0;
 
   const parsedFeePercent = parseCurrencyInput(feePercentInput);
-  const feePercent = isFree ? 0 : parsedFeePercent;
+  const feePercent = parsedFeePercent;
   const isFeePercentInvalid = feePercent === null || feePercent < 0 || feePercent > 100;
 
   const parsedFeeFixed = parseCurrencyInput(feeFixedInput);
@@ -369,11 +377,6 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
               setBillingType(next);
               if (next !== 'recurring') setBillingInterval(null);
               if (next === 'recurring' && !billingInterval) setBillingInterval('month');
-              if (next === 'free') {
-                setMinimumPriceInput(formatPriceInput(0));
-                setFeePercentInput(formatPriceInput(0));
-                setFeeFixedInput(formatPriceInput(0));
-              }
               if (next === 'recurring') setFeeFixedInput(formatPriceInput(0));
             }}
           >
@@ -400,7 +403,7 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
           <span>Valor mínimo</span>
           <input
             value={minimumPriceInput}
-            disabled={!canEdit || isFree}
+            disabled={!canEdit}
             inputMode="decimal"
             aria-invalid={isMinimumPriceInvalid}
             onBlur={() => {
@@ -416,7 +419,7 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
           <span>Taxa (%)</span>
           <input
             value={feePercentInput}
-            disabled={!canEdit || isFree}
+            disabled={!canEdit}
             inputMode="decimal"
             aria-invalid={isFeePercentInvalid}
             onBlur={() => {
@@ -459,13 +462,9 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
       <p className="billing-summary">
         Profissional verá: <strong>{billingTypeLabel(billingType)}</strong>
         {billingType === 'recurring' ? `, ${billingIntervalLabel(billingInterval ?? 'month').toLowerCase()}` : ''}
-        {isFree ? ', sem cobrança' : `, mínimo ${formatCurrencyExact(minimumPrice ?? 0)}`}
-        {!isFree && (
-          <>
-            {'. '}Comissão da plataforma: <strong>{formatPriceInput(feePercent ?? 0)}%</strong>
-            {feeFixedApplies && (feeFixed ?? 0) > 0 ? ` + ${formatCurrencyExact(feeFixed ?? 0)}` : ''} sobre o líquido.
-          </>
-        )}
+        {`, mínimo ${formatCurrencyExact(minimumPrice ?? 0)}`}
+        {'. '}Comissão da plataforma: <strong>{formatPriceInput(feePercent ?? 0)}%</strong>
+        {feeFixedApplies && (feeFixed ?? 0) > 0 ? ` + ${formatCurrencyExact(feeFixed ?? 0)}` : ''} sobre o líquido.
       </p>
       {message && <p className="row-message" role="status">{message}</p>}
     </article>
@@ -921,13 +920,21 @@ function PaymentSettingsForm({
   settings,
   canEdit,
 }: {
-  settings: { payout_processing_hours: number; payout_minimum_amount: number; card_settlement_days: number };
+  settings: {
+    payout_processing_hours: number;
+    payout_minimum_amount: number;
+    card_settlement_days: number;
+    settlement_weekdays: number[];
+  };
   canEdit: boolean;
 }) {
   const updateMutation = useUpdatePlatformPaymentSettings();
   const [hoursInput, setHoursInput] = useState(() => String(settings.payout_processing_hours));
   const [minimumInput, setMinimumInput] = useState(() => formatPriceInput(settings.payout_minimum_amount));
   const [settlementInput, setSettlementInput] = useState(() => String(settings.card_settlement_days));
+  const [weekdays, setWeekdays] = useState<number[]>(() =>
+    settings.settlement_weekdays.length ? [...settings.settlement_weekdays].sort((a, b) => a - b) : [1, 2, 3, 4, 5],
+  );
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const hours = parseIntInput(hoursInput);
@@ -937,22 +944,37 @@ function PaymentSettingsForm({
   const isHoursInvalid = hours === null;
   const isMinimumInvalid = minimum === null || minimum < 0;
   const isSettlementInvalid = settlement === null;
-  const hasInvalid = isHoursInvalid || isMinimumInvalid || isSettlementInvalid;
+  const isWeekdaysInvalid = weekdays.length === 0;
+  const hasInvalid = isHoursInvalid || isMinimumInvalid || isSettlementInvalid || isWeekdaysInvalid;
 
   const dirty =
     (hours ?? -1) !== settings.payout_processing_hours ||
     Math.round((minimum ?? -1) * 100) !== Math.round(settings.payout_minimum_amount * 100) ||
-    (settlement ?? -1) !== settings.card_settlement_days;
+    (settlement ?? -1) !== settings.card_settlement_days ||
+    weekdays.join(',') !== [...settings.settlement_weekdays].sort((a, b) => a - b).join(',');
+
+  const toggleWeekday = (day: number) => {
+    setWeekdays((current) =>
+      current.includes(day)
+        ? current.filter((item) => item !== day)
+        : [...current, day].sort((a, b) => a - b),
+    );
+  };
 
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
     if (hours === null || minimum === null || settlement === null || hasInvalid) {
-      setMessage({ type: 'error', text: 'Confira os valores: horas e dias devem ser inteiros positivos.' });
+      setMessage({ type: 'error', text: 'Confira os valores e selecione pelo menos um dia de liquidação.' });
       return;
     }
     updateMutation.mutate(
-      { payoutProcessingHours: hours, payoutMinimumAmount: minimum, cardSettlementDays: settlement },
+      {
+        payoutProcessingHours: hours,
+        payoutMinimumAmount: minimum,
+        cardSettlementDays: settlement,
+        settlementWeekdays: weekdays,
+      },
       {
         onSuccess: () => setMessage({ type: 'success', text: 'Parâmetros de pagamento atualizados.' }),
         onError: (error) =>
@@ -1008,6 +1030,27 @@ function PaymentSettingsForm({
           />
           <small>Prazo informativo exibido ao profissional (padrão 32).</small>
         </label>
+        <fieldset className="weekday-fieldset">
+          <legend>Agenda de liquidação</legend>
+          <div className="weekday-toggle-group" aria-label="Dias de liquidação">
+            {settlementWeekdayOptions.map((option) => {
+              const checked = weekdays.includes(option.value);
+              return (
+                <label key={option.value} className={`weekday-toggle ${checked ? 'selected' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={!canEdit}
+                    onChange={() => toggleWeekday(option.value)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          <small>Dias em que novos resgates entram na fila operacional.</small>
+          {isWeekdaysInvalid && <small className="form-error">Selecione ao menos um dia.</small>}
+        </fieldset>
         {canEdit && (
           <button className="button primary" type="submit" disabled={!dirty || hasInvalid || updateMutation.isPending}>
             {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <CheckCircle2 size={16} />}
@@ -1060,6 +1103,7 @@ function FinancePage() {
         ) : null}
 
         <PayoutQueuePanel canEdit={canEdit} />
+        <FinancialReconciliationPanel canEdit={canEdit} />
         <TransactionsPanel />
         <AsaasIntegrationPanel canEdit={canEdit} />
       </section>

@@ -796,6 +796,61 @@ svg text {
   line-height: 1.4;
 }
 
+.weekday-fieldset {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.weekday-fieldset legend {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.weekday-toggle-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.weekday-toggle {
+  position: relative;
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  color: rgb(var(--color-on-surface-variant));
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.weekday-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.weekday-toggle.selected {
+  border-color: rgb(var(--color-primary));
+  background: rgba(var(--color-primary), 0.1);
+  color: rgb(var(--color-primary));
+}
+
+.weekday-toggle:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .staff-form .button {
   align-self: end;
   justify-self: start;

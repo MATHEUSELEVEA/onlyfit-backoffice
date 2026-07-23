@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type BillingType = 'one_time' | 'recurring' | 'free';
+export type BillingType = 'one_time' | 'recurring';
 export type BillingInterval = 'month' | '2month' | 'quarter' | 'semester' | 'year';
 
 export type OfferingTypeBilling = {
@@ -41,7 +41,7 @@ function parseOfferingType(value: unknown): OfferingTypeBilling {
     icon: typeof row.icon === 'string' ? row.icon : null,
     enabled: row.enabled !== false,
     sort_order: numberFrom(row.sort_order),
-    billing_type: row.billing_type === 'recurring' || row.billing_type === 'free' ? row.billing_type : 'one_time',
+    billing_type: row.billing_type === 'recurring' ? 'recurring' : 'one_time',
     billing_interval:
       row.billing_interval === 'month' ||
       row.billing_interval === '2month' ||
@@ -89,7 +89,6 @@ export async function updateOfferingTypeBilling(input: {
 
 export function billingTypeLabel(value: BillingType): string {
   if (value === 'recurring') return 'Recorrente';
-  if (value === 'free') return 'Sem cobrança';
   return 'Pagamento único';
 }
 
