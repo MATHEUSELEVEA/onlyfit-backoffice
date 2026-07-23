@@ -33,7 +33,7 @@ import { FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useAuth } from './contexts/useAuth';
 import type { WeeklyActivity, WeeklyFinance } from './lib/dashboard';
 import { formatCurrency, formatCurrencyExact, formatDateTime, formatNumber } from './lib/format';
-import { PayoutQueuePanel, TransactionsPanel, AsaasIntegrationPanel, FinancialReconciliationPanel } from './components/FinancePanels';
+import { PayoutQueuePanel, TransactionsPanel, AsaasIntegrationPanel, FinancialReconciliationPanel, FinancialReportsPanel } from './components/FinancePanels';
 import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
@@ -1102,6 +1102,7 @@ function FinancePage() {
           <PaymentSettingsForm settings={data} canEdit={canEdit} />
         ) : null}
 
+        <FinancialReportsPanel />
         <PayoutQueuePanel canEdit={canEdit} />
         <FinancialReconciliationPanel canEdit={canEdit} />
         <TransactionsPanel />

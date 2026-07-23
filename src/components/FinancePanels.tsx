@@ -4,13 +4,16 @@ import {
   CheckCircle2,
   HandCoins,
   KeyRound,
+  Percent,
   ReceiptText,
   RefreshCw,
   Save,
+  ShieldCheck,
+  TrendingUp,
   Upload,
   X,
 } from 'lucide-react';
-import { formatCurrencyExact, formatDateTime } from '../lib/format';
+import { formatCurrencyExact, formatDateTime, formatNumber } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { payoutStatusLabel, type PayoutRequest } from '../lib/payouts';
 import {
@@ -33,6 +36,7 @@ import {
 import { usePaymentTransactions } from '../hooks/usePaymentTransactions';
 import { useAsaasIntegrationStatus, useSetAsaasCredentials } from '../hooks/useAsaasIntegration';
 import { useFinancialReconciliationRuns, useRecordTreasuryMovement, useRunFinancialReconciliation } from '../hooks/useFinancialReconciliation';
+import { useFinancialReports } from '../hooks/useFinancialReports';
 
 function formatDay(value: string): string {
   if (!value) return '—';
@@ -42,6 +46,209 @@ function formatDay(value: string): string {
 
 function isoDate(value: Date) {
   return value.toISOString().slice(0, 10);
+}
+
+function formatPercent(value: unknown): string {
+  const parsed = typeof value === 'number' ? value : Number(value) || 0;
+  return `${parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+}
+
+function cellNumber(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return Number(value) || 0;
+  return 0;
+}
+
+function cellText(value: unknown, fallback = '—'): string {
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
+function formatMoneyCell(value: unknown): string {
+  return formatCurrencyExact(cellNumber(value));
+}
+
+export function FinancialReportsPanel() {
+  const today = useMemo(() => isoDate(new Date()), []);
+  const monthStart = useMemo(() => {
+    const value = new Date();
+    value.setDate(1);
+    return isoDate(value);
+  }, []);
+  const [from, setFrom] = useState(monthStart);
+  const [to, setTo] = useState(today);
+  const filters = useMemo(() => ({ from, to }), [from, to]);
+  const query = useFinancialReports(filters, Boolean(from && to && from <= to));
+  const report = query.data;
+  const summary = report?.summary;
+  const flagTotal = report ? Object.values(report.controlFlags).reduce((sum, value) => sum + value, 0) : 0;
+
+  return (
+    <section className="staff-list-section" aria-labelledby="financial-reports-title">
+      <div className="section-heading">
+        <div>
+          <h2 id="financial-reports-title">Relatórios financeiros</h2>
+          <p>Vendas, take rate, obrigações com profissionais, assinaturas, eventos e trilha de auditoria em um contrato único.</p>
+        </div>
+        <div className="header-actions">
+          <label><span className="sr-only">Início</span><input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} /></label>
+          <label><span className="sr-only">Fim</span><input type="date" value={to} min={from} max={today} onChange={(event) => setTo(event.target.value)} /></label>
+          <button className="button secondary" type="button" onClick={() => query.refetch()} disabled={query.isFetching || !from || !to || from > to}>
+            <RefreshCw className={query.isFetching ? 'spin' : ''} size={16} />
+            Atualizar
+          </button>
+        </div>
+      </div>
+
+      {query.isError ? (
+        <div className="inline-alert danger" role="alert">
+          <AlertTriangle size={18} />
+          Não foi possível carregar os relatórios financeiros.
+        </div>
+      ) : query.isLoading ? (
+        <div className="skeleton staff-skeleton" />
+      ) : report && summary ? (
+        <>
+          <div className="reports-grid">
+            <article className="report-metric">
+              <div><span>GMV confirmado</span><TrendingUp size={18} /></div>
+              <strong>{formatCurrencyExact(summary.gross_revenue)}</strong>
+              <p>{formatNumber(summary.successful_transactions)} pagamentos · ticket médio {formatCurrencyExact(summary.average_ticket)}</p>
+            </article>
+            <article className="report-metric">
+              <div><span>Take rate líquido</span><Percent size={18} /></div>
+              <strong>{formatPercent(summary.take_rate_net_percent)}</strong>
+              <p>{formatCurrencyExact(summary.platform_commission)} de comissão OnlyFit</p>
+            </article>
+            <article className="report-metric">
+              <div><span>Profissionais</span><HandCoins size={18} /></div>
+              <strong>{formatCurrencyExact(summary.professional_net)}</strong>
+              <p>{formatCurrencyExact(summary.pending_settlement_value)} aguardando liquidação</p>
+            </article>
+            <article className="report-metric">
+              <div><span>Controles</span><ShieldCheck size={18} /></div>
+              <strong>{formatNumber(flagTotal)}</strong>
+              <p>{formatNumber(report.controlFlags.open_reconciliation_exceptions ?? 0)} exceções · {formatNumber(report.controlFlags.unprocessed_provider_events ?? 0)} eventos pendentes</p>
+            </article>
+          </div>
+
+          {summary.synthetic_transactions > 0 ? (
+            <div className="inline-alert soft" role="status">
+              <ReceiptText size={18} />
+              {formatNumber(summary.synthetic_transactions)} transação sintética marcada como teste está incluída neste período.
+            </div>
+          ) : null}
+
+          <div className="report-columns">
+            <div className="report-block">
+              <h3>Resumo econômico</h3>
+              <dl className="status-list">
+                <div><dt>Receita líquida Asaas</dt><dd>{formatCurrencyExact(summary.net_revenue)}</dd></div>
+                <div><dt>Taxas Asaas</dt><dd>{formatCurrencyExact(summary.asaas_fees)} · {formatPercent(summary.asaas_fee_rate_percent)}</dd></div>
+                <div><dt>Take rate bruto</dt><dd>{formatPercent(summary.take_rate_gross_percent)}</dd></div>
+                <div><dt>Participação profissional</dt><dd>{formatPercent(summary.professional_share_net_percent)}</dd></div>
+                <div><dt>MRR ativo</dt><dd>{formatCurrencyExact(summary.active_subscription_mrr)}</dd></div>
+              </dl>
+            </div>
+            <div className="report-block">
+              <h3>Liquidação e carteira</h3>
+              <dl className="status-list">
+                <div><dt>Carteira disponível</dt><dd>{formatCurrencyExact(summary.wallet_available)}</dd></div>
+                <div><dt>Carteira pendente</dt><dd>{formatCurrencyExact(summary.wallet_pending)}</dd></div>
+                <div><dt>Carteira reservada</dt><dd>{formatCurrencyExact(summary.wallet_reserved)}</dd></div>
+                <div><dt>Resgates abertos</dt><dd>{formatNumber(summary.open_payout_count)} · {formatCurrencyExact(summary.open_payout_amount)}</dd></div>
+                <div><dt>Resgates pagos</dt><dd>{formatNumber(summary.paid_payout_count)} · {formatCurrencyExact(summary.paid_payout_amount)}</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <div className="table-wrapper">
+            <table className="staff-table">
+              <thead><tr><th>Tipo de oferta</th><th>Vendas</th><th>Bruto</th><th>Comissão</th><th>Profissional</th><th>Take rate</th></tr></thead>
+              <tbody>
+                {report.salesByOfferingType.length ? report.salesByOfferingType.map((row) => (
+                  <tr key={cellText(row.offering_type)}>
+                    <td><strong>{cellText(row.offering_type_name)}</strong><span>{cellText(row.offering_type)}</span></td>
+                    <td>{formatNumber(cellNumber(row.transactions_count))}</td>
+                    <td>{formatMoneyCell(row.gross_revenue)}</td>
+                    <td>{formatMoneyCell(row.platform_commission)}</td>
+                    <td>{formatMoneyCell(row.professional_net)}</td>
+                    <td>{formatPercent(row.take_rate_net_percent)}</td>
+                  </tr>
+                )) : <tr><td colSpan={6}>Nenhuma venda confirmada no período.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="table-wrapper">
+            <table className="staff-table">
+              <thead><tr><th>Profissional</th><th>Vendas</th><th>Bruto</th><th>Comissão</th><th>A liquidar</th><th>Disponível</th><th>Take rate</th></tr></thead>
+              <tbody>
+                {report.salesByProfessional.length ? report.salesByProfessional.map((row) => (
+                  <tr key={cellText(row.professional_profile_id)}>
+                    <td><strong>{cellText(row.professional_name)}</strong><span>{row.professional_username ? `@${row.professional_username}` : cellText(row.professional_profile_id).slice(0, 8)}</span></td>
+                    <td>{formatNumber(cellNumber(row.transactions_count))}</td>
+                    <td>{formatMoneyCell(row.gross_revenue)}</td>
+                    <td>{formatMoneyCell(row.platform_commission)}</td>
+                    <td>{formatMoneyCell(row.pending_settlement_value)}</td>
+                    <td>{formatMoneyCell(row.wallet_available)}</td>
+                    <td>{formatPercent(row.take_rate_net_percent)}</td>
+                  </tr>
+                )) : <tr><td colSpan={7}>Nenhum profissional com venda confirmada no período.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="report-columns">
+            <ReportList title="Liquidação" rows={report.settlementByStatus} labelKey="settlement_status" countKey="transactions_count" amountKey="professional_net" />
+            <ReportList title="Assinaturas" rows={report.subscriptionStatuses} labelKey="status" countKey="subscriptions_count" amountKey="total_value" />
+            <ReportList title="Payouts" rows={report.payoutStatuses} labelKey="status" countKey="payouts_count" amountKey="total_amount" />
+            <ReportList title="Eventos Asaas" rows={report.providerEvents} labelKey="event_name" countKey="events_count" amountKey="unprocessed_count" amountLabel="não processados" />
+            <ReportList title="Auditoria" rows={report.auditEvents} labelKey="event" countKey="events_count" dateKey="last_at" />
+            <ReportList title="Livro razão" rows={report.journalAccounts} labelKey="code" countKey="credits" amountKey="balance" amountLabel="saldo" />
+          </div>
+
+          <p className="muted-copy">Atualizado em {formatDateTime(new Date(report.generatedAt))}. Valores vêm de RPC staff com RLS e trilha financeira sem expor segredos ou dados completos de cartão/PIX.</p>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+function ReportList({
+  title,
+  rows,
+  labelKey,
+  countKey,
+  amountKey,
+  amountLabel,
+  dateKey,
+}: {
+  title: string;
+  rows: Array<Record<string, string | number | null>>;
+  labelKey: string;
+  countKey: string;
+  amountKey?: string;
+  amountLabel?: string;
+  dateKey?: string;
+}) {
+  return (
+    <div className="report-block">
+      <h3>{title}</h3>
+      {rows.length ? (
+        <dl className="status-list">
+          {rows.slice(0, 8).map((row) => (
+            <div key={`${title}-${cellText(row[labelKey])}`}>
+              <dt>{cellText(row[labelKey])}{dateKey && row[dateKey] ? <span>{formatDateTime(new Date(String(row[dateKey])))}</span> : null}</dt>
+              <dd>
+                {formatNumber(cellNumber(row[countKey]))}
+                {amountKey ? ` · ${amountLabel ? `${amountLabel} ` : ''}${amountLabel === 'não processados' ? formatNumber(cellNumber(row[amountKey])) : formatMoneyCell(row[amountKey])}` : ''}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : <p className="muted-copy">Sem dados no período.</p>}
+    </div>
+  );
 }
 
 export function FinancialReconciliationPanel({ canEdit }: { canEdit: boolean }) {
