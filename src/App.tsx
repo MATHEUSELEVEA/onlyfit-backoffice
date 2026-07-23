@@ -33,6 +33,7 @@ import { FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useAuth } from './contexts/useAuth';
 import type { WeeklyActivity, WeeklyFinance } from './lib/dashboard';
 import { formatCurrency, formatCurrencyExact, formatDateTime, formatNumber } from './lib/format';
+import { PayoutQueuePanel, TransactionsPanel, AsaasIntegrationPanel } from './components/FinancePanels';
 import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
@@ -1058,24 +1059,9 @@ function FinancePage() {
           <PaymentSettingsForm settings={data} canEdit={canEdit} />
         ) : null}
 
-        <section className="staff-list-section" aria-labelledby="payout-queue-title">
-          <div className="section-heading">
-            <div>
-              <h2 id="payout-queue-title">Fila de resgates</h2>
-              <p>Aprovação dos pedidos de resgate via PIX (chave CPF) dos profissionais.</p>
-            </div>
-          </div>
-          <div className="access-panel inline-access" role="status">
-            <div className="status-icon"><HandCoins size={24} /></div>
-            <div>
-              <h2>Aguardando o fluxo de pagamentos</h2>
-              <p>
-                A fila de resgates aparece aqui assim que o modelo de custódia for definido e o recebimento
-                de pagamentos entrar em operação. A estrutura de auditoria e os parâmetros acima já estão prontos.
-              </p>
-            </div>
-          </div>
-        </section>
+        <PayoutQueuePanel canEdit={canEdit} />
+        <TransactionsPanel />
+        <AsaasIntegrationPanel canEdit={canEdit} />
       </section>
     </>
   );
