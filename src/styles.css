@@ -313,7 +313,7 @@ select:focus-visible {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
 }
 
@@ -355,8 +355,8 @@ select:focus-visible {
 }
 
 .metric-card {
-  min-height: 132px;
-  padding: 18px;
+  min-height: 118px;
+  padding: 16px;
 }
 
 .metric-finance {
@@ -384,16 +384,18 @@ select:focus-visible {
 
 .metric-card strong {
   display: block;
-  margin-top: 18px;
+  margin-top: 16px;
   color: rgb(var(--color-on-surface));
-  font-size: 28px;
+  font-size: 26px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
   line-height: 1;
 }
 
 .metric-card p {
   margin: 10px 0 0;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .lower-grid {
@@ -433,6 +435,9 @@ select:focus-visible {
 }
 
 .chart-total svg {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
   align-self: center;
   color: rgb(var(--color-primary));
 }
@@ -480,7 +485,7 @@ select:focus-visible {
   background: rgb(var(--color-error));
 }
 
-.chart-panel svg {
+.chart-panel > svg {
   display: block;
   width: 100%;
   min-height: 220px;
@@ -531,6 +536,16 @@ svg text {
 
 .ops-panel {
   padding: 18px;
+}
+
+.ops-panel > div strong {
+  color: rgb(var(--color-on-surface));
+  font-size: 16px;
+}
+
+.ops-panel > div span {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 13px;
 }
 
 .inline-alert svg {
@@ -604,8 +619,8 @@ svg text {
 
 .offering-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .offering-type-overview {
@@ -639,15 +654,16 @@ svg text {
 
 .offering-row {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(360px, 0.9fr) auto;
   min-width: 0;
-  flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  gap: 16px;
   overflow: hidden;
   border: 1px solid rgb(var(--color-outline-variant));
   border-radius: 10px;
   background: rgb(var(--color-surface-container));
-  padding: 18px;
+  padding: 16px 18px;
 }
 
 .offering-row::before {
@@ -694,7 +710,7 @@ svg text {
 
 .offering-main > span {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
   color: rgb(var(--color-on-surface-variant));
   font-size: 13px;
   line-height: 1.45;
@@ -704,7 +720,7 @@ svg text {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .offering-badges span {
@@ -728,7 +744,7 @@ svg text {
   border: 1px solid rgb(var(--color-outline-variant));
   border-radius: 10px;
   background: rgb(var(--color-surface-container-low));
-  padding: 12px;
+  padding: 10px;
 }
 
 .offering-rule-strip span {
@@ -741,9 +757,9 @@ svg text {
 .offering-rule-strip strong {
   display: block;
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: 6px;
   color: rgb(var(--color-on-surface));
-  font-size: 17px;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
   text-overflow: ellipsis;
@@ -751,11 +767,18 @@ svg text {
 }
 
 .offering-edit-details {
-  border-top: 1px solid rgb(var(--color-outline-variant));
-  padding-top: 12px;
+  justify-self: end;
 }
 
 .offering-edit-details summary {
+  min-width: 92px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
   cursor: pointer;
   color: rgb(var(--color-on-surface));
   font-size: 13px;
@@ -768,18 +791,25 @@ svg text {
 }
 
 .offering-edit-details summary::after {
-  content: '+';
-  float: right;
+  content: '';
+  float: none;
   color: rgb(var(--color-primary));
 }
 
-.offering-edit-details[open] summary::after {
-  content: '-';
+.offering-edit-details[open] {
+  grid-column: 1 / -1;
+  width: 100%;
+  border-top: 1px solid rgb(var(--color-outline-variant));
+  padding-top: 12px;
+}
+
+.offering-edit-details[open] summary {
+  margin-bottom: 12px;
 }
 
 .billing-controls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) auto;
   align-items: end;
   gap: 10px;
   margin-top: 12px;
@@ -2299,7 +2329,16 @@ svg text {
   }
 
   .offering-row {
+    grid-template-columns: 1fr;
     padding: 16px;
+  }
+
+  .offering-edit-details {
+    justify-self: stretch;
+  }
+
+  .offering-edit-details summary {
+    width: 100%;
   }
 
   .offering-list {
