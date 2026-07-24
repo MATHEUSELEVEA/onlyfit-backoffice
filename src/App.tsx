@@ -1708,14 +1708,14 @@ function FinanceChart({ finance }: { finance: WeeklyFinance[] }) {
   );
 }
 
-function PulseStatusPanel({ outbox }: { outbox: Record<string, number> }) {
+function SystemEventsPanel({ outbox }: { outbox: Record<string, number> }) {
   const statuses = Object.entries(outbox).sort((left, right) => right[1] - left[1]);
 
   return (
     <aside className="ops-panel">
       <div>
-        <strong>Fila Pulse</strong>
-        <span>Eventos atuais agrupados pelo status gravado no banco</span>
+        <strong>Eventos do sistema</strong>
+        <span>Fila operacional por status</span>
       </div>
       {statuses.length === 0 ? (
         <p className="empty-copy">Nenhum evento na fila.</p>
@@ -1743,7 +1743,6 @@ function DashboardSkeleton() {
 
 function Dashboard() {
   const { data, isLoading, isError, refetch, isFetching } = useDashboardSnapshot(true);
-  const outboxTotal = data ? Object.values(data.outbox).reduce((sum, value) => sum + value, 0) : 0;
 
   const appMetrics = useMemo(
     () => data ? [
@@ -1784,14 +1783,8 @@ function Dashboard() {
         icon: AlertTriangle,
         tone: data.overview.pending_content_reports > 0 ? 'attention' as const : 'neutral' as const,
       },
-      {
-        title: 'Fila Pulse',
-        value: formatNumber(outboxTotal),
-        detail: 'Eventos de automação por status',
-        icon: Activity,
-      },
     ] : [],
-    [data, outboxTotal],
+    [data],
   );
 
   const financeMetrics = useMemo(
@@ -1879,7 +1872,7 @@ function Dashboard() {
 
             <DashboardSection
               title="Ações no app"
-              description="Grandes números de uso, criação de conteúdo, engajamento e operação."
+              description="Uso, conteúdo e moderação."
             >
               <div className="dashboard-grid">
                 {appMetrics.map((metric) => <MetricCard key={metric.title} {...metric} />)}
@@ -1888,7 +1881,7 @@ function Dashboard() {
 
             <DashboardSection
               title="Financeiro"
-              description="Valores acumulados e situação das cobranças processadas pela plataforma."
+              description="Cobranças, comissão e liquidação."
             >
               <div className="dashboard-grid">
                 {financeMetrics.map((metric) => <MetricCard key={metric.title} {...metric} />)}
@@ -1907,7 +1900,7 @@ function Dashboard() {
           <div className="lower-grid">
             <AppActivityChart activity={data.weeklyActivity} />
             <FinanceChart finance={data.weeklyFinance} />
-            <PulseStatusPanel outbox={data.outbox} />
+            <SystemEventsPanel outbox={data.outbox} />
           </div>
         )}
       </section>
