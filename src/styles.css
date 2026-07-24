@@ -1494,6 +1494,20 @@ svg text {
   padding: 18px;
 }
 
+.feed-tuning-section {
+  position: relative;
+  overflow: hidden;
+}
+
+.feed-tuning-section::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: rgb(var(--color-primary));
+  content: '';
+  opacity: 0.65;
+}
+
 .feed-command-panel {
   display: grid;
   grid-template-columns: minmax(260px, 0.8fr) minmax(320px, 1.2fr) minmax(360px, 1fr);
@@ -1669,7 +1683,7 @@ svg text {
 
 .feed-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   align-items: start;
   gap: 10px;
 }
@@ -1677,54 +1691,109 @@ svg text {
 .feed-field-card {
   display: grid;
   min-width: 0;
-  gap: 10px;
+  gap: 12px;
   border: 1px solid rgb(var(--color-outline-variant));
   border-radius: 8px;
-  background: rgb(var(--color-surface-container-low));
-  padding: 12px;
+  background: linear-gradient(180deg, rgb(var(--color-surface-container-low)), rgb(var(--color-surface-container-lowest)));
+  padding: 14px;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
-.feed-field-card div {
+.feed-field-card:hover {
+  border-color: rgb(var(--color-primary) / 0.35);
+}
+
+.feed-field-card[aria-invalid='true'] {
+  border-color: rgb(var(--color-error));
+}
+
+.feed-field-top {
   display: flex;
   min-width: 0;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
-.feed-field-card span {
+.feed-field-top span {
   overflow: hidden;
   color: rgb(var(--color-on-surface-variant));
   font-size: 12px;
   font-weight: 800;
+  line-height: 1.25;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.feed-field-card strong {
+.feed-field-top strong {
+  flex: 0 0 auto;
+  min-width: 54px;
+  border-radius: 999px;
+  background: rgb(var(--color-primary) / 0.12);
   color: rgb(var(--color-on-surface));
-  font-size: 16px;
+  padding: 5px 8px;
+  text-align: center;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
-.feed-field-card input {
-  min-height: 38px;
+.feed-field-card input[type='range'] {
+  appearance: none;
   width: 100%;
-  border: 1px solid rgb(var(--color-outline-variant));
-  border-radius: 8px;
-  background: rgb(var(--color-surface-container-lowest));
-  color: rgb(var(--color-on-surface));
-  padding: 0 10px;
-  font: inherit;
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--color-primary)) 0%,
+      rgb(var(--color-primary)) var(--feed-progress),
+      rgb(var(--color-outline-variant)) var(--feed-progress),
+      rgb(var(--color-outline-variant)) 100%
+    );
+  cursor: pointer;
 }
 
-.feed-field-card input[aria-invalid='true'] {
-  border-color: rgb(var(--color-error));
+.feed-field-card input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgb(var(--color-surface-container));
+  border-radius: 999px;
+  background: rgb(var(--color-primary));
+  box-shadow: 0 0 0 1px rgb(var(--color-primary) / 0.55);
 }
 
-.feed-field-card input:disabled {
+.feed-field-card input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgb(var(--color-surface-container));
+  border-radius: 999px;
+  background: rgb(var(--color-primary));
+  box-shadow: 0 0 0 1px rgb(var(--color-primary) / 0.55);
+}
+
+.feed-field-card input[type='range']:focus-visible {
+  outline: 2px solid rgb(var(--color-primary));
+  outline-offset: 6px;
+}
+
+.feed-field-card input[type='range']:disabled {
   opacity: 0.55;
+  cursor: default;
+}
+
+.feed-slider-scale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.7;
 }
 
 .feed-actions {

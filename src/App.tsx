@@ -30,7 +30,7 @@ import {
   WalletCards,
   X,
 } from 'lucide-react';
-import { FormEvent, type ReactNode, useMemo, useState } from 'react';
+import { type CSSProperties, FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useAuth } from './contexts/useAuth';
 import type { WeeklyActivity, WeeklyFinance } from './lib/dashboard';
 import { formatCurrency, formatCurrencyExact, formatDateTime, formatNumber } from './lib/format';
@@ -566,6 +566,25 @@ const feedDefaults: Record<FeedFieldKey, number> = {
   slotsExperimental: 1,
 };
 
+function getFeedFieldMax(key: FeedFieldKey): number {
+  if ((feedSlotKeys as ReadonlyArray<FeedFieldKey>).includes(key)) return 12;
+  if (key === 'noveltyHalfLifeHours') return 168;
+  if (key === 'penaltyAlreadyWatched') return 2;
+  return 1;
+}
+
+function getFeedFieldStep(key: FeedFieldKey): number {
+  if ((feedSlotKeys as ReadonlyArray<FeedFieldKey>).includes(key)) return 1;
+  if (key === 'noveltyHalfLifeHours') return 0.1;
+  return 0.01;
+}
+
+function getFeedFieldUnit(key: FeedFieldKey): string {
+  if (key === 'noveltyHalfLifeHours') return 'h';
+  if ((feedSlotKeys as ReadonlyArray<FeedFieldKey>).includes(key)) return 'pos.';
+  return '';
+}
+
 function FeedField({
   descriptor,
   value,
@@ -581,21 +600,44 @@ function FeedField({
 }) {
   const parsed = parseDecimalInput(value);
   const min = descriptor.min ?? 0;
+  const max = Math.max(getFeedFieldMax(descriptor.key), parsed ?? 0);
+  const step = getFeedFieldStep(descriptor.key);
+  const unit = getFeedFieldUnit(descriptor.key);
+  const sliderValue = parsed === null ? min : Math.min(max, Math.max(min, parsed));
+  const progress = max === min ? 0 : ((sliderValue - min) / (max - min)) * 100;
   const invalid = parsed === null || parsed < min;
   return (
-    <label className="feed-field-card" title={descriptor.hint}>
-      <div>
+    <label
+      className="feed-field-card"
+      title={descriptor.hint}
+      aria-invalid={invalid ? 'true' : undefined}
+      style={{ '--feed-progress': `${progress}%` } as CSSProperties}
+    >
+      <div className="feed-field-top">
         <span>{descriptor.label}</span>
-        <strong>{value || '—'}</strong>
+        <strong>
+          {value || '—'}
+          {unit ? ` ${unit}` : ''}
+        </strong>
       </div>
       <input
-        value={value}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={sliderValue}
         disabled={disabled}
-        inputMode="decimal"
-        aria-invalid={invalid}
+        aria-label={descriptor.label}
         onBlur={onBlurFormat}
-        onChange={(event) => onChange(event.target.value.replace(/[^\d.,]/g, ''))}
+        onChange={(event) => onChange(formatDecimal(Number(event.target.value), step >= 1 ? 0 : 2))}
       />
+      <div className="feed-slider-scale" aria-hidden="true">
+        <span>{formatDecimal(min, step >= 1 ? 0 : 1)}</span>
+        <span>
+          {formatDecimal(max, step >= 1 ? 0 : 1)}
+          {unit ? ` ${unit}` : ''}
+        </span>
+      </div>
     </label>
   );
 }
