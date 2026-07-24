@@ -22,6 +22,7 @@ import {
   Save,
   Shield,
   Shuffle,
+  ShoppingBag,
   SlidersHorizontal,
   Sparkles,
   UserPlus,
@@ -38,6 +39,7 @@ import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
 import { useOfferingTypeBilling, useUpdateOfferingTypeBilling } from './hooks/useOfferingTypeBilling';
+import { useOfferingCatalog, useSyncProductOffering } from './hooks/useOfferingCatalog';
 import { usePlatformPaymentSettings, useUpdatePlatformPaymentSettings } from './hooks/usePlatformPaymentSettings';
 import { usePlatformStaff } from './hooks/usePlatformStaff';
 import { useFeedAlgorithmSettings, useUpdateFeedAlgorithmSettings } from './hooks/useFeedAlgorithm';
@@ -56,18 +58,20 @@ import {
   type BillingType,
   type OfferingTypeBilling,
 } from './lib/offeringTypes';
+import type { OfferingCatalogFilters, OfferingCatalogItem, OfferingCatalogSource, OfferingCatalogStatus } from './lib/offeringCatalog';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'feed', label: 'Feed', icon: Rss },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
+  { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
   { id: 'users', label: 'Equipe', icon: Users },
   { label: 'Moderação', icon: Shield, disabled: true },
   { label: 'Alertas', icon: Bell, disabled: true },
 ] as const;
 
-type SectionId = 'dashboard' | 'feed' | 'offering-types' | 'finance' | 'users';
+type SectionId = 'dashboard' | 'feed' | 'offering-types' | 'offerings' | 'finance' | 'users';
 
 const billingTypeOptions: ReadonlyArray<{ value: BillingType; label: string }> = [
   { value: 'one_time', label: 'Pagamento único' },
@@ -1065,6 +1069,272 @@ function PaymentSettingsForm({
   );
 }
 
+const offeringCatalogSourceOptions: ReadonlyArray<{ value: OfferingCatalogSource | ''; label: string }> = [
+  { value: '', label: 'Todas as origens' },
+  { value: 'business_offering', label: 'Contrato financeiro' },
+  { value: 'market_product', label: 'Produto Market legado' },
+];
+
+const offeringCatalogStatusOptions: ReadonlyArray<{ value: OfferingCatalogStatus | ''; label: string }> = [
+  { value: '', label: 'Todos os status' },
+  { value: 'active', label: 'Ativa' },
+  { value: 'draft', label: 'Rascunho' },
+  { value: 'paused', label: 'Pausada' },
+  { value: 'archived', label: 'Arquivada' },
+];
+
+function offeringStatusLabel(status: OfferingCatalogStatus): string {
+  switch (status) {
+    case 'active': return 'Ativa';
+    case 'draft': return 'Rascunho';
+    case 'paused': return 'Pausada';
+    case 'archived': return 'Arquivada';
+    default: return status;
+  }
+}
+
+function financialStatusLabel(value: string): string {
+  switch (value) {
+    case 'ready': return 'Pronta';
+    case 'inactive': return 'Inativa';
+    case 'price_required': return 'Sem preço';
+    case 'missing_fee_snapshot': return 'Sem snapshot';
+    case 'config_required': return 'Sem configuração';
+    case 'linked_product_unpublished': return 'Produto despublicado';
+    case 'linked_product_inactive': return 'Produto inativo';
+    case 'unpublished': return 'Não publicado';
+    case 'free_or_missing_price': return 'Gratuito/sem preço';
+    case 'needs_offering_type': return 'Mapear tipo';
+    case 'missing_organization': return 'Sem organização';
+    case 'price_below_minimum': return 'Abaixo do mínimo';
+    case 'needs_sync': return 'Sincronizar';
+    default: return value;
+  }
+}
+
+function sourceLabel(source: OfferingCatalogSource): string {
+  return source === 'market_product' ? 'Market legado' : 'Contrato financeiro';
+}
+
+function feeRuleText(item: OfferingCatalogItem): string {
+  if (item.billing_type === 'free') return 'Gratuita';
+  if (item.fee_percent_snapshot == null || item.fee_fixed_snapshot == null) return 'Sem snapshot';
+  const percent = `${item.fee_percent_snapshot.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+  return item.fee_fixed_snapshot > 0
+    ? `${percent} + ${formatCurrencyExact(item.fee_fixed_snapshot)}`
+    : percent;
+}
+
+function OfferingCatalogPage() {
+  const { data: currentRole } = useCurrentStaffRole();
+  const canEdit = currentRole === 'super_admin' || currentRole === 'admin';
+  const { data: offeringTypes = [] } = useOfferingTypeBilling(true);
+  const [source, setSource] = useState<OfferingCatalogSource | ''>('');
+  const [offeringType, setOfferingType] = useState('');
+  const [status, setStatus] = useState<OfferingCatalogStatus | ''>('');
+  const [page, setPage] = useState(0);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const syncMutation = useSyncProductOffering();
+  const pageSize = 50;
+  const filters = useMemo<OfferingCatalogFilters>(
+    () => ({
+      source: source || null,
+      offeringType: offeringType || null,
+      status: status || null,
+      limit: pageSize,
+      offset: page * pageSize,
+    }),
+    [source, offeringType, status, page],
+  );
+  const query = useOfferingCatalog(filters, true);
+  const items = query.data?.items ?? [];
+  const total = query.data?.total ?? 0;
+  const maxPage = Math.max(0, Math.ceil(total / pageSize) - 1);
+  const readyCount = items.filter((item) => item.financial_status === 'ready').length;
+  const attentionCount = items.length - readyCount;
+
+  async function syncProduct(item: OfferingCatalogItem) {
+    if (!item.product_id || !canEdit) return;
+    setMessage(null);
+    try {
+      const offeringId = await syncMutation.mutateAsync(item.product_id);
+      setMessage({
+        type: offeringId ? 'success' : 'error',
+        text: offeringId
+          ? 'Produto sincronizado com o contrato financeiro.'
+          : 'Produto ainda não pôde ser sincronizado. Confira tipo, preço e organização.',
+      });
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Não foi possível sincronizar.' });
+    }
+  }
+
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <p className="section-label">Catálogo financeiro</p>
+          <h1>Ofertas</h1>
+          <span>Assinaturas, consultorias, itens avulsos e produtos de Market com regra financeira, venda, take rate e liquidação.</span>
+        </div>
+        <div className="header-actions">
+          <button className="button secondary" type="button" onClick={() => query.refetch()} disabled={query.isFetching}>
+            <RefreshCw className={query.isFetching ? 'spin' : ''} size={16} />
+            Atualizar
+          </button>
+        </div>
+      </header>
+
+      <section className="content">
+        <div className="reports-grid">
+          <article className="report-metric">
+            <div><span>Total listado</span><ShoppingBag size={18} /></div>
+            <strong>{formatNumber(total)}</strong>
+            <p>{formatNumber(items.length)} nesta página</p>
+          </article>
+          <article className="report-metric">
+            <div><span>Prontas</span><CheckCircle2 size={18} /></div>
+            <strong>{formatNumber(readyCount)}</strong>
+            <p>Com preço e snapshot financeiro válidos</p>
+          </article>
+          <article className="report-metric">
+            <div><span>Pendências</span><AlertTriangle size={18} /></div>
+            <strong>{formatNumber(attentionCount)}</strong>
+            <p>Exigem correção antes de venda real</p>
+          </article>
+          <article className="report-metric">
+            <div><span>GMV da página</span><BarChart3 size={18} /></div>
+            <strong>{formatCurrencyExact(items.reduce((sum, item) => sum + item.gross_revenue, 0))}</strong>
+            <p>{formatCurrencyExact(items.reduce((sum, item) => sum + item.platform_commission, 0))} OnlyFit</p>
+          </article>
+        </div>
+
+        <section className="staff-list-section" aria-labelledby="offering-catalog-title">
+          <div className="section-heading">
+            <div>
+              <h2 id="offering-catalog-title">Catálogo auditável</h2>
+              <p>Itens que o frontend pode vender ou expor; produtos sem contrato ficam explícitos como pendência.</p>
+            </div>
+            <div className="header-actions">
+              <select
+                value={source}
+                onChange={(event) => { setSource(event.target.value as OfferingCatalogSource | ''); setPage(0); }}
+                aria-label="Filtrar por origem"
+              >
+                {offeringCatalogSourceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+              <select
+                value={offeringType}
+                onChange={(event) => { setOfferingType(event.target.value); setPage(0); }}
+                aria-label="Filtrar por tipo de oferta"
+              >
+                <option value="">Todos os tipos</option>
+                {offeringTypes.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+              </select>
+              <select
+                value={status}
+                onChange={(event) => { setStatus(event.target.value as OfferingCatalogStatus | ''); setPage(0); }}
+                aria-label="Filtrar por status"
+              >
+                {offeringCatalogStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {message ? (
+            <div className={`inline-alert ${message.type === 'error' ? 'danger' : ''}`} role="status">
+              {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+              {message.text}
+            </div>
+          ) : null}
+
+          {query.isError ? (
+            <div className="inline-alert danger" role="alert">
+              <AlertTriangle size={18} />
+              Não foi possível carregar o catálogo financeiro.
+            </div>
+          ) : query.isLoading ? (
+            <div className="skeleton staff-skeleton" />
+          ) : items.length === 0 ? (
+            <div className="access-panel inline-access" role="status">
+              <div className="status-icon"><ShoppingBag size={24} /></div>
+              <div>
+                <h2>Nenhuma oferta encontrada</h2>
+                <p>Ajuste os filtros ou crie uma oferta no app profissional.</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="table-wrapper">
+                <table className="staff-table">
+                  <thead>
+                    <tr>
+                      <th>Oferta</th>
+                      <th>Origem</th>
+                      <th>Negócio</th>
+                      <th>Preço</th>
+                      <th>Regra</th>
+                      <th>Vendas</th>
+                      <th>Comissão</th>
+                      <th>Liquidação</th>
+                      <th>Status</th>
+                      <th>Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => (
+                      <tr key={`${item.source}-${item.catalog_item_id}`}>
+                        <td>
+                          <strong>{item.name}</strong>
+                          <span>{item.offering_type_name} {item.owner_username ? `· @${item.owner_username}` : ''}</span>
+                        </td>
+                        <td>{sourceLabel(item.source)}</td>
+                        <td>{item.organization_name ?? item.organization_slug ?? '—'}</td>
+                        <td>{item.billing_type === 'free' ? 'Grátis' : formatCurrencyExact(item.price)}</td>
+                        <td>{feeRuleText(item)}</td>
+                        <td>{formatNumber(item.transactions_count)} · {formatCurrencyExact(item.gross_revenue)}</td>
+                        <td>{formatCurrencyExact(item.platform_commission)}</td>
+                        <td>
+                          <strong>{formatCurrencyExact(item.pending_settlement_value)}</strong>
+                          <span>{formatCurrencyExact(item.settled_value)} liquidado</span>
+                        </td>
+                        <td>
+                          <span className={`role-badge role-${item.status}`}>{offeringStatusLabel(item.status)}</span>
+                          <span>{financialStatusLabel(item.financial_status)}</span>
+                        </td>
+                        <td>
+                          {item.source === 'market_product' && item.product_id ? (
+                            <button
+                              className="button secondary compact"
+                              type="button"
+                              disabled={!canEdit || syncMutation.isPending}
+                              onClick={() => syncProduct(item)}
+                            >
+                              <Shuffle size={14} />
+                              Sincronizar
+                            </button>
+                          ) : item.business_offering_id ? (
+                            <span>{item.business_offering_id.slice(0, 8)}</span>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="header-actions" style={{ marginTop: '1rem', justifyContent: 'flex-end' }}>
+                <span>{formatNumber(total)} oferta(s) · página {page + 1} de {maxPage + 1}</span>
+                <button className="button secondary" type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Anterior</button>
+                <button className="button secondary" type="button" onClick={() => setPage((p) => Math.min(maxPage, p + 1))} disabled={page >= maxPage}>Próxima</button>
+              </div>
+            </>
+          )}
+        </section>
+      </section>
+    </>
+  );
+}
+
 function FinancePage() {
   const { data: currentRole } = useCurrentStaffRole();
   const canEdit = currentRole === 'super_admin' || currentRole === 'admin';
@@ -1886,6 +2156,7 @@ function AppShell() {
         {activeSection === 'dashboard' && <Dashboard />}
         {activeSection === 'feed' && <FeedAlgorithmPage />}
         {activeSection === 'offering-types' && <OfferingTypesPage />}
+        {activeSection === 'offerings' && <OfferingCatalogPage />}
         {activeSection === 'finance' && <FinancePage />}
         {activeSection === 'users' && <UsersPage />}
       </div>
