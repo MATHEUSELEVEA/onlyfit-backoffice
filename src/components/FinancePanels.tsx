@@ -142,8 +142,8 @@ export function FinancialReportsPanel() {
             <div className="report-block">
               <h3>Economia</h3>
               <dl className="status-list">
-                <div><dt>Líquido Asaas</dt><dd>{formatCurrencyExact(summary.net_revenue)}</dd></div>
-                <div><dt>Taxas Asaas</dt><dd>{formatCurrencyExact(summary.asaas_fees)} · {formatPercent(summary.asaas_fee_rate_percent)}</dd></div>
+                <div><dt>Líquido provedor</dt><dd>{formatCurrencyExact(summary.net_revenue)}</dd></div>
+                <div><dt>Taxas provedor</dt><dd>{formatCurrencyExact(summary.asaas_fees)} · {formatPercent(summary.asaas_fee_rate_percent)}</dd></div>
                 <div><dt>Take rate bruto</dt><dd>{formatPercent(summary.take_rate_gross_percent)}</dd></div>
                 <div><dt>Profissional</dt><dd>{formatPercent(summary.professional_share_net_percent)}</dd></div>
                 <div><dt>MRR ativo</dt><dd>{formatCurrencyExact(summary.active_subscription_mrr)}</dd></div>
@@ -208,7 +208,7 @@ export function FinancialReportsPanel() {
             <ReportList title="Liquidação" rows={report.settlementByStatus} labelKey="settlement_status" countKey="transactions_count" amountKey="professional_net" />
             <ReportList title="Assinaturas" rows={report.subscriptionStatuses} labelKey="status" countKey="subscriptions_count" amountKey="total_value" />
             <ReportList title="Payouts" rows={report.payoutStatuses} labelKey="status" countKey="payouts_count" amountKey="total_amount" />
-            <ReportList title="Eventos Asaas" rows={report.providerEvents} labelKey="event_name" countKey="events_count" amountKey="unprocessed_count" amountLabel="não processados" />
+            <ReportList title="Eventos provedor" rows={report.providerEvents} labelKey="event_name" countKey="events_count" amountKey="unprocessed_count" amountLabel="não processados" />
             <ReportList title="Auditoria" rows={report.auditEvents} labelKey="event" countKey="events_count" dateKey="last_at" />
             <ReportList title="Livro razão" rows={report.journalAccounts} labelKey="code" countKey="credits" amountKey="balance" amountLabel="saldo" />
           </div>
@@ -279,7 +279,7 @@ export function FinancialReconciliationPanel({ canEdit }: { canEdit: boolean }) 
       <div className="section-heading">
         <div>
           <h2 id="financial-reconciliation-title">Conciliação</h2>
-          <p>Extrato Asaas x livro razão.</p>
+          <p>Extrato do provedor x livro razão.</p>
         </div>
         {canEdit ? (
           <div className="header-actions finance-filter-row">
@@ -769,7 +769,7 @@ export function TransactionsPanel() {
                   <th>Profissional</th>
                   <th>Comprador</th>
                   <th>Bruto</th>
-                  <th>Taxa Asaas</th>
+                  <th>Taxa provedor</th>
                   <th>Comissão</th>
                   <th>Líquido prof.</th>
                   <th>Status</th>
@@ -807,7 +807,7 @@ export function TransactionsPanel() {
 }
 
 // -----------------------------------------------------------------------------
-// Integração Asaas — configuração de chaves (WS7)
+// Integração do provedor de pagamentos.
 // -----------------------------------------------------------------------------
 function AsaasEnvironmentForm({ environment, canEdit }: { environment: AsaasEnvironment; canEdit: boolean }) {
   const [apiKey, setApiKey] = useState('');
@@ -869,16 +869,16 @@ function AsaasEnvironmentForm({ environment, canEdit }: { environment: AsaasEnvi
   );
 }
 
-export function AsaasIntegrationPanel({ canEdit }: { canEdit: boolean }) {
+export function ProviderIntegrationPanel({ canEdit }: { canEdit: boolean }) {
   const query = useAsaasIntegrationStatus(true);
   const environments = query.data ?? [];
 
   return (
-    <section className="finance-section" aria-labelledby="asaas-integration-title">
+    <section className="finance-section" aria-labelledby="provider-integration-title">
       <div className="section-heading">
         <div>
-          <h2 id="asaas-integration-title">Asaas</h2>
-          <p>Secrets e webhook.</p>
+          <h2 id="provider-integration-title">Provedor</h2>
+          <p>Credenciais e webhook.</p>
         </div>
         <button className="button secondary" type="button" onClick={() => query.refetch()} disabled={query.isFetching}>
           <RefreshCw className={query.isFetching ? 'spin' : ''} size={16} />

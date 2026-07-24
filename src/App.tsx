@@ -34,7 +34,7 @@ import { FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { useAuth } from './contexts/useAuth';
 import type { WeeklyActivity, WeeklyFinance } from './lib/dashboard';
 import { formatCurrency, formatCurrencyExact, formatDateTime, formatNumber } from './lib/format';
-import { PayoutQueuePanel, TransactionsPanel, AsaasIntegrationPanel, FinancialReconciliationPanel, FinancialReportsPanel } from './components/FinancePanels';
+import { PayoutQueuePanel, TransactionsPanel, ProviderIntegrationPanel, FinancialReconciliationPanel, FinancialReportsPanel } from './components/FinancePanels';
 import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
@@ -1342,7 +1342,7 @@ function FinancePage() {
   const { data: currentRole } = useCurrentStaffRole();
   const canEdit = currentRole === 'super_admin' || currentRole === 'admin';
   const { data, isLoading, isError, refetch, isFetching } = usePlatformPaymentSettings(true);
-  const [financeTab, setFinanceTab] = useState<'overview' | 'payouts' | 'reconciliation' | 'transactions' | 'asaas'>('overview');
+  const [financeTab, setFinanceTab] = useState<'overview' | 'payouts' | 'reconciliation' | 'transactions' | 'provider'>('overview');
 
   return (
     <>
@@ -1366,7 +1366,7 @@ function FinancePage() {
           <button type="button" role="tab" aria-selected={financeTab === 'payouts'} onClick={() => setFinanceTab('payouts')}>Liquidação</button>
           <button type="button" role="tab" aria-selected={financeTab === 'reconciliation'} onClick={() => setFinanceTab('reconciliation')}>Conciliação</button>
           <button type="button" role="tab" aria-selected={financeTab === 'transactions'} onClick={() => setFinanceTab('transactions')}>Transações</button>
-          <button type="button" role="tab" aria-selected={financeTab === 'asaas'} onClick={() => setFinanceTab('asaas')}>Asaas</button>
+          <button type="button" role="tab" aria-selected={financeTab === 'provider'} onClick={() => setFinanceTab('provider')}>Provedor</button>
         </div>
 
         {financeTab === 'overview' ? (
@@ -1387,7 +1387,7 @@ function FinancePage() {
         {financeTab === 'payouts' ? <PayoutQueuePanel canEdit={canEdit} /> : null}
         {financeTab === 'reconciliation' ? <FinancialReconciliationPanel canEdit={canEdit} /> : null}
         {financeTab === 'transactions' ? <TransactionsPanel /> : null}
-        {financeTab === 'asaas' ? <AsaasIntegrationPanel canEdit={canEdit} /> : null}
+        {financeTab === 'provider' ? <ProviderIntegrationPanel canEdit={canEdit} /> : null}
       </section>
     </>
   );
