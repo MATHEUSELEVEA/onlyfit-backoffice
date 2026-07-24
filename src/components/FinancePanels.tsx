@@ -67,6 +67,39 @@ function formatMoneyCell(value: unknown): string {
   return formatCurrencyExact(cellNumber(value));
 }
 
+function friendlyLedgerLabel(value: unknown): string {
+  const code = cellText(value);
+  const labels: Record<string, string> = {
+    asaas_cash: 'Caixa provedor',
+    asaas_fee_expense: 'Taxas',
+    asaas_fee_recovery: 'Recuperacao taxas',
+    asaas_settlement_pending: 'A liquidar',
+    onlyfit_commission_revenue: 'Receita OnlyFit',
+    professional_payable_available: 'Profissionais',
+    professional_payable_reserved: 'Reservado',
+    refunds_and_chargebacks: 'Estornos',
+  };
+  return labels[code] ?? code.replace(/_/g, ' ');
+}
+
+function friendlyStatusLabel(value: unknown): string {
+  const text = cellText(value);
+  const labels: Record<string, string> = {
+    active: 'Ativas',
+    confirmed: 'Confirmada',
+    settled: 'Liquidada',
+    pending: 'Pendente',
+    payment_recorded: 'Registrado',
+    pending_approval: 'Aprovar',
+    PAYMENT_CONFIRMED: 'Pagamento confirmado',
+    PAYMENT_RECEIVED: 'Pagamento recebido',
+    manual_smoke_payment_confirmed: 'Smoke test',
+    test_premium_subscription_configured: 'Assinatura teste',
+    offering_commission_snapshot_migrated: 'Comissoes migradas',
+  };
+  return labels[text] ?? text.replace(/_/g, ' ');
+}
+
 export function FinancialReportsPanel() {
   const today = useMemo(() => isoDate(new Date()), []);
   const monthStart = useMemo(() => {
@@ -204,13 +237,19 @@ export function FinancialReportsPanel() {
             </div>
           </div>
 
-          <div className="finance-mini-grid">
+          <div className="finance-control-panel">
+            <div className="finance-control-head">
+              <h3>Controles</h3>
+              <span>Operação e trilha financeira</span>
+            </div>
+            <div className="finance-mini-grid">
             <ReportList title="Liquidação" rows={report.settlementByStatus} labelKey="settlement_status" countKey="transactions_count" amountKey="professional_net" />
             <ReportList title="Assinaturas" rows={report.subscriptionStatuses} labelKey="status" countKey="subscriptions_count" amountKey="total_value" />
-            <ReportList title="Payouts" rows={report.payoutStatuses} labelKey="status" countKey="payouts_count" amountKey="total_amount" />
-            <ReportList title="Eventos provedor" rows={report.providerEvents} labelKey="event_name" countKey="events_count" amountKey="unprocessed_count" amountLabel="não processados" />
+            <ReportList title="Repasses" rows={report.payoutStatuses} labelKey="status" countKey="payouts_count" amountKey="total_amount" />
+            <ReportList title="Eventos" rows={report.providerEvents} labelKey="event_name" countKey="events_count" amountKey="unprocessed_count" amountLabel="pendentes" />
             <ReportList title="Auditoria" rows={report.auditEvents} labelKey="event" countKey="events_count" dateKey="last_at" />
-            <ReportList title="Livro razão" rows={report.journalAccounts} labelKey="code" countKey="credits" amountKey="balance" amountLabel="saldo" />
+            <LedgerReport rows={report.journalAccounts} />
+            </div>
           </div>
 
           <p className="muted-copy">Atualizado em {formatDateTime(new Date(report.generatedAt))}.</p>
@@ -244,16 +283,42 @@ function ReportList({
         <dl className="status-list">
           {rows.slice(0, 8).map((row) => (
             <div key={`${title}-${cellText(row[labelKey])}`}>
-              <dt>{cellText(row[labelKey])}{dateKey && row[dateKey] ? <span>{formatDateTime(new Date(String(row[dateKey])))}</span> : null}</dt>
+              <dt>{friendlyStatusLabel(row[labelKey])}{dateKey && row[dateKey] ? <span>{formatDateTime(new Date(String(row[dateKey])))}</span> : null}</dt>
               <dd>
                 {formatNumber(cellNumber(row[countKey]))}
-                {amountKey ? ` · ${amountLabel ? `${amountLabel} ` : ''}${amountLabel === 'não processados' ? formatNumber(cellNumber(row[amountKey])) : formatMoneyCell(row[amountKey])}` : ''}
+                {amountKey ? ` · ${amountLabel === 'pendentes' ? `${formatNumber(cellNumber(row[amountKey]))} pend.` : `${amountLabel ? `${amountLabel} ` : ''}${formatMoneyCell(row[amountKey])}`}` : ''}
               </dd>
             </div>
           ))}
         </dl>
       ) : <p className="muted-copy">Sem dados no período.</p>}
     </div>
+  );
+}
+
+function LedgerReport({ rows }: { rows: Array<Record<string, string | number | null>> }) {
+  const totalBalance = rows.reduce((sum, row) => sum + cellNumber(row.balance), 0);
+
+  return (
+    <details className="ledger-summary">
+      <summary>
+        <span>
+          <strong>Razão</strong>
+          <small>{formatNumber(rows.length)} contas</small>
+        </span>
+        <b>{formatCurrencyExact(totalBalance)}</b>
+      </summary>
+      {rows.length ? (
+        <dl className="status-list">
+          {rows.slice(0, 8).map((row) => (
+            <div key={`ledger-${cellText(row.code)}`}>
+              <dt>{friendlyLedgerLabel(row.code)}</dt>
+              <dd>{formatMoneyCell(row.balance)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : <p className="muted-copy">Sem contas no período.</p>}
+    </details>
   );
 }
 

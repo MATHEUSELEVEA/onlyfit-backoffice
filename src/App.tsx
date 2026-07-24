@@ -985,82 +985,93 @@ function PaymentSettingsForm({
 
   return (
     <section className="finance-section finance-settings-panel" aria-labelledby="payment-settings-title">
-      <div className="finance-section-head">
-        <Gauge size={18} />
-        <div>
-          <h2 id="payment-settings-title">Operação</h2>
-          <p>Resgate, liquidação e agenda.</p>
-        </div>
-        {canEdit && (
-          <button className="button primary finance-save-button" form="payment-settings-form" type="submit" disabled={!dirty || hasInvalid || updateMutation.isPending}>
-            {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <CheckCircle2 size={16} />}
-            Salvar
-          </button>
-        )}
-      </div>
-
-      <form id="payment-settings-form" className="finance-settings-grid" onSubmit={save}>
-        <div className="finance-setting-card">
-          <span>Resgate</span>
-          <label>
-            <small>Horas úteis</small>
-            <input
-              value={hoursInput}
-              disabled={!canEdit}
-              inputMode="numeric"
-              aria-invalid={isHoursInvalid}
-              onChange={(event) => setHoursInput(event.target.value.replace(/[^\d]/g, ''))}
-            />
-          </label>
-          <label>
-            <small>Mínimo</small>
-            <input
-              value={minimumInput}
-              disabled={!canEdit}
-              inputMode="decimal"
-              aria-invalid={isMinimumInvalid}
-              onBlur={() => {
-                if (minimum !== null) setMinimumInput(formatPriceInput(minimum));
-              }}
-              onChange={(event) => setMinimumInput(event.target.value.replace(/[^\d.,]/g, ''))}
-            />
-          </label>
-        </div>
-        <div className="finance-setting-card">
-          <span>Cartão</span>
-          <label>
-            <small>Liquidação</small>
-            <input
-              value={settlementInput}
-              disabled={!canEdit}
-              inputMode="numeric"
-              aria-invalid={isSettlementInvalid}
-              onChange={(event) => setSettlementInput(event.target.value.replace(/[^\d]/g, ''))}
-            />
-          </label>
-          <strong>{settlement ?? settings.card_settlement_days} dias</strong>
-        </div>
-        <fieldset className="finance-setting-card weekday-fieldset">
-          <legend>Agenda</legend>
-          <div className="weekday-toggle-group" aria-label="Dias de liquidação">
-            {settlementWeekdayOptions.map((option) => {
-              const checked = weekdays.includes(option.value);
-              return (
-                <label key={option.value} className={`weekday-toggle ${checked ? 'selected' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={!canEdit}
-                    onChange={() => toggleWeekday(option.value)}
-                  />
-                  <span>{option.label}</span>
-                </label>
-              );
-            })}
+      <details className="finance-settings-details">
+        <summary>
+          <div className="finance-section-head">
+            <Gauge size={18} />
+            <div>
+              <h2 id="payment-settings-title">Operação</h2>
+              <p>Resgate, liquidação e agenda.</p>
+            </div>
           </div>
-          {isWeekdaysInvalid && <small className="form-error">Selecione um dia.</small>}
-        </fieldset>
-      </form>
+          <div className="finance-settings-summary">
+            <span><b>{settings.payout_processing_hours}h</b> resgate</span>
+            <span><b>{formatCurrencyExact(settings.payout_minimum_amount)}</b> mínimo</span>
+            <span><b>{settings.card_settlement_days}d</b> cartão</span>
+            <span><b>{weekdays.length}</b> dias</span>
+          </div>
+          {canEdit ? <i>Editar</i> : null}
+        </summary>
+
+        <form id="payment-settings-form" className="finance-settings-grid" onSubmit={save}>
+          <div className="finance-setting-card">
+            <span>Resgate</span>
+            <label>
+              <small>Horas úteis</small>
+              <input
+                value={hoursInput}
+                disabled={!canEdit}
+                inputMode="numeric"
+                aria-invalid={isHoursInvalid}
+                onChange={(event) => setHoursInput(event.target.value.replace(/[^\d]/g, ''))}
+              />
+            </label>
+            <label>
+              <small>Mínimo</small>
+              <input
+                value={minimumInput}
+                disabled={!canEdit}
+                inputMode="decimal"
+                aria-invalid={isMinimumInvalid}
+                onBlur={() => {
+                  if (minimum !== null) setMinimumInput(formatPriceInput(minimum));
+                }}
+                onChange={(event) => setMinimumInput(event.target.value.replace(/[^\d.,]/g, ''))}
+              />
+            </label>
+          </div>
+          <div className="finance-setting-card">
+            <span>Cartão</span>
+            <label>
+              <small>Liquidação</small>
+              <input
+                value={settlementInput}
+                disabled={!canEdit}
+                inputMode="numeric"
+                aria-invalid={isSettlementInvalid}
+                onChange={(event) => setSettlementInput(event.target.value.replace(/[^\d]/g, ''))}
+              />
+            </label>
+            <strong>{settlement ?? settings.card_settlement_days} dias</strong>
+          </div>
+          <fieldset className="finance-setting-card weekday-fieldset">
+            <legend>Agenda</legend>
+            <div className="weekday-toggle-group" aria-label="Dias de liquidação">
+              {settlementWeekdayOptions.map((option) => {
+                const checked = weekdays.includes(option.value);
+                return (
+                  <label key={option.value} className={`weekday-toggle ${checked ? 'selected' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={!canEdit}
+                      onChange={() => toggleWeekday(option.value)}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {isWeekdaysInvalid && <small className="form-error">Selecione um dia.</small>}
+          </fieldset>
+          {canEdit ? (
+            <button className="button primary finance-save-button" type="submit" disabled={!dirty || hasInvalid || updateMutation.isPending}>
+              {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <CheckCircle2 size={16} />}
+              Salvar
+            </button>
+          ) : null}
+        </form>
+      </details>
 
       {message && (
         <div className={`inline-alert ${message.type === 'error' ? 'danger' : ''}`} role="status">
