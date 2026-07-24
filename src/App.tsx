@@ -583,8 +583,11 @@ function FeedField({
   const min = descriptor.min ?? 0;
   const invalid = parsed === null || parsed < min;
   return (
-    <label>
-      <span>{descriptor.label}</span>
+    <label className="feed-field-card" title={descriptor.hint}>
+      <div>
+        <span>{descriptor.label}</span>
+        <strong>{value || '—'}</strong>
+      </div>
       <input
         value={value}
         disabled={disabled}
@@ -593,7 +596,6 @@ function FeedField({
         onBlur={onBlurFormat}
         onChange={(event) => onChange(event.target.value.replace(/[^\d.,]/g, ''))}
       />
-      <small>{descriptor.hint}</small>
     </label>
   );
 }
@@ -722,14 +724,7 @@ function FeedAlgorithmPage() {
         </div>
       </header>
 
-      <section className="content">
-        <div className="inline-alert">
-          <Rss size={18} />
-          {canEdit
-            ? 'A regra escolhida aqui é aplicada em tempo real ao feed de todos os usuários do app, sem novo deploy.'
-            : 'Seu papel permite consultar esta configuração, mas somente administradores podem alterá-la.'}
-        </div>
-
+      <section className="content feed-page">
         {isLoading ? (
           <div className="skeleton staff-skeleton" />
         ) : isError ? (
@@ -738,9 +733,21 @@ function FeedAlgorithmPage() {
             Não foi possível carregar a configuração do feed. Verifique se a migration do feed foi aplicada.
           </div>
         ) : (
-          <form className="staff-form feed-form" onSubmit={save}>
-            <fieldset className="feed-mode" disabled={!canEdit}>
-              <legend>Modo do feed</legend>
+          <form className="feed-form" onSubmit={save}>
+            <section className="feed-command-panel">
+              <div className="feed-command-head">
+                <div>
+                  <span>Modo ativo</span>
+                  <h2>{mode === 'algorithm' ? 'Algoritmo' : 'Aleatório'}</h2>
+                </div>
+                <div className="feed-live-pill">
+                  <Rss size={14} />
+                  Tempo real
+                </div>
+              </div>
+
+              <fieldset className="feed-mode" disabled={!canEdit}>
+                <legend className="sr-only">Modo do feed</legend>
               <label className={`feed-mode-option ${mode === 'algorithm' ? 'selected' : ''}`}>
                 <input
                   type="radio"
@@ -751,8 +758,8 @@ function FeedAlgorithmPage() {
                 />
                 <Sparkles size={18} />
                 <div>
-                  <strong>Algoritmo personalizado</strong>
-                  <span>Ranking por afinidade, retenção, engajamento, novidade e exploração, com diversidade.</span>
+                  <strong>Algoritmo</strong>
+                  <span>Personalizado</span>
                 </div>
               </label>
               <label className={`feed-mode-option ${mode === 'random' ? 'selected' : ''}`}>
@@ -766,80 +773,98 @@ function FeedAlgorithmPage() {
                 <Shuffle size={18} />
                 <div>
                   <strong>Aleatório</strong>
-                  <span>Mostra todo o conteúdo elegível em ordem aleatória, ignorando o ranking.</span>
+                  <span>Sem ranking</span>
                 </div>
               </label>
-            </fieldset>
+              </fieldset>
+
+              <div className="feed-kpis">
+                <article>
+                  <span>Pesos</span>
+                  <strong>{formatDecimal(weightSum)}</strong>
+                </article>
+                <article>
+                  <span>Bloco</span>
+                  <strong>{blockSize || '—'}</strong>
+                </article>
+                <article>
+                  <span>Novidade</span>
+                  <strong>{formatDecimal(parsedValues.noveltyHalfLifeHours ?? feedDefaults.noveltyHalfLifeHours)}h</strong>
+                </article>
+                <article>
+                  <span>Status</span>
+                  <strong>{hasInvalid ? 'Revisar' : 'OK'}</strong>
+                </article>
+              </div>
+            </section>
 
             {mode === 'algorithm' && (
               <>
-                <div className="feed-section-head">
-                  <SlidersHorizontal size={18} />
-                  <div>
-                    <h2>Pesos do ranking</h2>
-                    <p>
-                      Quanto cada sinal contribui para a posição do post. Soma atual dos pesos:{' '}
-                      <strong>{formatDecimal(weightSum)}</strong> (o clássico soma 1, mas valores livres funcionam).
-                    </p>
+                <section className="feed-tuning-section">
+                  <div className="feed-section-head">
+                    <SlidersHorizontal size={18} />
+                    <div>
+                      <h2>Ranking</h2>
+                      <p>Soma {formatDecimal(weightSum)}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="feed-grid">
-                  {feedWeightFields.map((field) => (
-                    <FeedField
-                      key={field.key}
-                      descriptor={field}
-                      value={values[field.key]}
-                      disabled={!canEdit}
-                      onChange={(raw) => setField(field.key, raw)}
-                      onBlurFormat={() => formatField(field.key)}
-                    />
-                  ))}
-                </div>
+                  <div className="feed-grid">
+                    {feedWeightFields.map((field) => (
+                      <FeedField
+                        key={field.key}
+                        descriptor={field}
+                        value={values[field.key]}
+                        disabled={!canEdit}
+                        onChange={(raw) => setField(field.key, raw)}
+                        onBlurFormat={() => formatField(field.key)}
+                      />
+                    ))}
+                  </div>
+                </section>
 
-                <div className="feed-section-head">
-                  <SlidersHorizontal size={18} />
-                  <div>
-                    <h2>Penalidades e diversidade</h2>
-                    <p>Descontos que evitam repetição e conteúdo já visto.</p>
+                <section className="feed-tuning-section">
+                  <div className="feed-section-head">
+                    <SlidersHorizontal size={18} />
+                    <div>
+                      <h2>Ajustes</h2>
+                      <p>Repetição, histórico e diversidade</p>
+                    </div>
                   </div>
-                </div>
-                <div className="feed-grid">
-                  {feedTuningFields.map((field) => (
-                    <FeedField
-                      key={field.key}
-                      descriptor={field}
-                      value={values[field.key]}
-                      disabled={!canEdit}
-                      onChange={(raw) => setField(field.key, raw)}
-                      onBlurFormat={() => formatField(field.key)}
-                    />
-                  ))}
-                </div>
+                  <div className="feed-grid">
+                    {feedTuningFields.map((field) => (
+                      <FeedField
+                        key={field.key}
+                        descriptor={field}
+                        value={values[field.key]}
+                        disabled={!canEdit}
+                        onChange={(raw) => setField(field.key, raw)}
+                        onBlurFormat={() => formatField(field.key)}
+                      />
+                    ))}
+                  </div>
+                </section>
 
-                <div className="feed-section-head">
-                  <SlidersHorizontal size={18} />
-                  <div>
-                    <h2>Distribuição de slots</h2>
-                    <p>
-                      Quantas posições de cada critério entram por bloco de conteúdo. Bloco atual:{' '}
-                      <strong>{blockSize || '—'}</strong> posts, sendo {values.slotsInterest || '—'} de afinidade,{' '}
-                      {values.slotsFollowed || '—'} de seguidos, {values.slotsPopular || '—'} de popular e{' '}
-                      {values.slotsExperimental || '—'} experimental.
-                    </p>
+                <section className="feed-tuning-section">
+                  <div className="feed-section-head">
+                    <SlidersHorizontal size={18} />
+                    <div>
+                      <h2>Distribuição</h2>
+                      <p>{blockSize || '—'} posições por bloco</p>
+                    </div>
                   </div>
-                </div>
-                <div className="feed-grid">
-                  {feedSlotFields.map((field) => (
-                    <FeedField
-                      key={field.key}
-                      descriptor={field}
-                      value={values[field.key]}
-                      disabled={!canEdit}
-                      onChange={(raw) => setField(field.key, raw)}
-                      onBlurFormat={() => formatField(field.key)}
-                    />
-                  ))}
-                </div>
+                  <div className="feed-grid">
+                    {feedSlotFields.map((field) => (
+                      <FeedField
+                        key={field.key}
+                        descriptor={field}
+                        value={values[field.key]}
+                        disabled={!canEdit}
+                        onChange={(raw) => setField(field.key, raw)}
+                        onBlurFormat={() => formatField(field.key)}
+                      />
+                    ))}
+                  </div>
+                </section>
               </>
             )}
 
