@@ -296,8 +296,6 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
   const [message, setMessage] = useState('');
 
   const isRecurring = billingType === 'recurring';
-  // Recorrente usa só percentual; único aceita % e/ou fixo.
-  const feeFixedApplies = billingType === 'one_time';
 
   const parsedMinimumPrice = parseCurrencyInput(minimumPriceInput);
   const minimumPrice = parsedMinimumPrice;
@@ -308,7 +306,7 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
   const isFeePercentInvalid = feePercent === null || feePercent < 0 || feePercent > 100;
 
   const parsedFeeFixed = parseCurrencyInput(feeFixedInput);
-  const feeFixed = feeFixedApplies ? parsedFeeFixed : 0;
+  const feeFixed = parsedFeeFixed;
   const isFeeFixedInvalid = feeFixed === null || feeFixed < 0;
 
   const dirty =
@@ -377,7 +375,6 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
               setBillingType(next);
               if (next !== 'recurring') setBillingInterval(null);
               if (next === 'recurring' && !billingInterval) setBillingInterval('month');
-              if (next === 'recurring') setFeeFixedInput(formatPriceInput(0));
             }}
           >
             {billingTypeOptions.map((option) => (
@@ -435,10 +432,9 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
           <span>Taxa fixa (R$)</span>
           <input
             value={feeFixedInput}
-            disabled={!canEdit || !feeFixedApplies}
+            disabled={!canEdit}
             inputMode="decimal"
             aria-invalid={isFeeFixedInvalid}
-            title={feeFixedApplies ? undefined : 'A taxa fixa só se aplica a pagamento único.'}
             onBlur={() => {
               if (feeFixed !== null) setFeeFixedInput(formatPriceInput(feeFixed));
             }}
@@ -464,7 +460,7 @@ function OfferingTypeBillingRow({ item, canEdit }: { item: OfferingTypeBilling; 
         {billingType === 'recurring' ? `, ${billingIntervalLabel(billingInterval ?? 'month').toLowerCase()}` : ''}
         {`, mínimo ${formatCurrencyExact(minimumPrice ?? 0)}`}
         {'. '}Comissão da plataforma: <strong>{formatPriceInput(feePercent ?? 0)}%</strong>
-        {feeFixedApplies && (feeFixed ?? 0) > 0 ? ` + ${formatCurrencyExact(feeFixed ?? 0)}` : ''} sobre o líquido.
+        {(feeFixed ?? 0) > 0 ? ` + ${formatCurrencyExact(feeFixed ?? 0)}` : ''} sobre o líquido.
       </p>
       {message && <p className="row-message" role="status">{message}</p>}
     </article>
