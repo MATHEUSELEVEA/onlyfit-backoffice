@@ -984,54 +984,64 @@ function PaymentSettingsForm({
   };
 
   return (
-    <section className="staff-create-panel" aria-labelledby="payment-settings-title">
-      <div className="staff-create-copy">
-        <Gauge size={20} />
+    <section className="finance-section finance-settings-panel" aria-labelledby="payment-settings-title">
+      <div className="finance-section-head">
+        <Gauge size={18} />
         <div>
-          <h2 id="payment-settings-title">Parâmetros de pagamento</h2>
-          <p>Regras globais usadas quando o fluxo de pagamentos estiver ativo. Só administradores alteram.</p>
+          <h2 id="payment-settings-title">Operação</h2>
+          <p>Resgate, liquidação e agenda.</p>
         </div>
+        {canEdit && (
+          <button className="button primary finance-save-button" form="payment-settings-form" type="submit" disabled={!dirty || hasInvalid || updateMutation.isPending}>
+            {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <CheckCircle2 size={16} />}
+            Salvar
+          </button>
+        )}
       </div>
 
-      <form className="staff-form" onSubmit={save}>
-        <label>
-          <span>Prazo de processamento de resgate (horas úteis)</span>
-          <input
-            value={hoursInput}
-            disabled={!canEdit}
-            inputMode="numeric"
-            aria-invalid={isHoursInvalid}
-            onChange={(event) => setHoursInput(event.target.value.replace(/[^\d]/g, ''))}
-          />
-          <small>Tempo-alvo entre a solicitação e o envio do resgate (padrão 48).</small>
-        </label>
-        <label>
-          <span>Valor mínimo de resgate (R$)</span>
-          <input
-            value={minimumInput}
-            disabled={!canEdit}
-            inputMode="decimal"
-            aria-invalid={isMinimumInvalid}
-            onBlur={() => {
-              if (minimum !== null) setMinimumInput(formatPriceInput(minimum));
-            }}
-            onChange={(event) => setMinimumInput(event.target.value.replace(/[^\d.,]/g, ''))}
-          />
-          <small>0 permite resgatar qualquer valor disponível.</small>
-        </label>
-        <label>
-          <span>Janela de liquidação de cartão (dias)</span>
-          <input
-            value={settlementInput}
-            disabled={!canEdit}
-            inputMode="numeric"
-            aria-invalid={isSettlementInvalid}
-            onChange={(event) => setSettlementInput(event.target.value.replace(/[^\d]/g, ''))}
-          />
-          <small>Prazo informativo exibido ao profissional (padrão 32).</small>
-        </label>
-        <fieldset className="weekday-fieldset">
-          <legend>Agenda de liquidação</legend>
+      <form id="payment-settings-form" className="finance-settings-grid" onSubmit={save}>
+        <div className="finance-setting-card">
+          <span>Resgate</span>
+          <label>
+            <small>Horas úteis</small>
+            <input
+              value={hoursInput}
+              disabled={!canEdit}
+              inputMode="numeric"
+              aria-invalid={isHoursInvalid}
+              onChange={(event) => setHoursInput(event.target.value.replace(/[^\d]/g, ''))}
+            />
+          </label>
+          <label>
+            <small>Mínimo</small>
+            <input
+              value={minimumInput}
+              disabled={!canEdit}
+              inputMode="decimal"
+              aria-invalid={isMinimumInvalid}
+              onBlur={() => {
+                if (minimum !== null) setMinimumInput(formatPriceInput(minimum));
+              }}
+              onChange={(event) => setMinimumInput(event.target.value.replace(/[^\d.,]/g, ''))}
+            />
+          </label>
+        </div>
+        <div className="finance-setting-card">
+          <span>Cartão</span>
+          <label>
+            <small>Liquidação</small>
+            <input
+              value={settlementInput}
+              disabled={!canEdit}
+              inputMode="numeric"
+              aria-invalid={isSettlementInvalid}
+              onChange={(event) => setSettlementInput(event.target.value.replace(/[^\d]/g, ''))}
+            />
+          </label>
+          <strong>{settlement ?? settings.card_settlement_days} dias</strong>
+        </div>
+        <fieldset className="finance-setting-card weekday-fieldset">
+          <legend>Agenda</legend>
           <div className="weekday-toggle-group" aria-label="Dias de liquidação">
             {settlementWeekdayOptions.map((option) => {
               const checked = weekdays.includes(option.value);
@@ -1048,15 +1058,8 @@ function PaymentSettingsForm({
               );
             })}
           </div>
-          <small>Dias em que novos resgates entram na fila operacional.</small>
-          {isWeekdaysInvalid && <small className="form-error">Selecione ao menos um dia.</small>}
+          {isWeekdaysInvalid && <small className="form-error">Selecione um dia.</small>}
         </fieldset>
-        {canEdit && (
-          <button className="button primary" type="submit" disabled={!dirty || hasInvalid || updateMutation.isPending}>
-            {updateMutation.isPending ? <RefreshCw className="spin" size={16} /> : <CheckCircle2 size={16} />}
-            Salvar parâmetros
-          </button>
-        )}
       </form>
 
       {message && (
@@ -1339,14 +1342,15 @@ function FinancePage() {
   const { data: currentRole } = useCurrentStaffRole();
   const canEdit = currentRole === 'super_admin' || currentRole === 'admin';
   const { data, isLoading, isError, refetch, isFetching } = usePlatformPaymentSettings(true);
+  const [financeTab, setFinanceTab] = useState<'overview' | 'payouts' | 'reconciliation' | 'transactions' | 'asaas'>('overview');
 
   return (
     <>
       <header className="page-header">
         <div>
           <p className="section-label">Financeiro</p>
-          <h1>Pagamentos e resgates</h1>
-          <span>Parâmetros globais de pagamento e a fila de aprovação de resgates dos profissionais.</span>
+          <h1>Pagamentos</h1>
+          <span>Vendas, liquidação, repasses e auditoria.</span>
         </div>
         <div className="header-actions">
           <button className="button secondary" type="button" onClick={() => refetch()} disabled={isFetching}>
@@ -1356,23 +1360,34 @@ function FinancePage() {
         </div>
       </header>
 
-      <section className="content">
-        {isLoading ? (
-          <div className="skeleton staff-skeleton" />
-        ) : isError ? (
-          <div className="inline-alert danger" role="alert">
-            <AlertTriangle size={18} />
-            Não foi possível carregar os parâmetros de pagamento.
-          </div>
-        ) : data ? (
-          <PaymentSettingsForm settings={data} canEdit={canEdit} />
-        ) : null}
+      <section className="content finance-page">
+        <div className="finance-tabs" role="tablist" aria-label="Financeiro">
+          <button type="button" role="tab" aria-selected={financeTab === 'overview'} onClick={() => setFinanceTab('overview')}>Visão geral</button>
+          <button type="button" role="tab" aria-selected={financeTab === 'payouts'} onClick={() => setFinanceTab('payouts')}>Liquidação</button>
+          <button type="button" role="tab" aria-selected={financeTab === 'reconciliation'} onClick={() => setFinanceTab('reconciliation')}>Conciliação</button>
+          <button type="button" role="tab" aria-selected={financeTab === 'transactions'} onClick={() => setFinanceTab('transactions')}>Transações</button>
+          <button type="button" role="tab" aria-selected={financeTab === 'asaas'} onClick={() => setFinanceTab('asaas')}>Asaas</button>
+        </div>
 
-        <FinancialReportsPanel />
-        <PayoutQueuePanel canEdit={canEdit} />
-        <FinancialReconciliationPanel canEdit={canEdit} />
-        <TransactionsPanel />
-        <AsaasIntegrationPanel canEdit={canEdit} />
+        {financeTab === 'overview' ? (
+          <>
+            {isLoading ? (
+              <div className="skeleton staff-skeleton" />
+            ) : isError ? (
+              <div className="inline-alert danger" role="alert">
+                <AlertTriangle size={18} />
+                Não foi possível carregar os parâmetros.
+              </div>
+            ) : data ? (
+              <PaymentSettingsForm settings={data} canEdit={canEdit} />
+            ) : null}
+            <FinancialReportsPanel />
+          </>
+        ) : null}
+        {financeTab === 'payouts' ? <PayoutQueuePanel canEdit={canEdit} /> : null}
+        {financeTab === 'reconciliation' ? <FinancialReconciliationPanel canEdit={canEdit} /> : null}
+        {financeTab === 'transactions' ? <TransactionsPanel /> : null}
+        {financeTab === 'asaas' ? <AsaasIntegrationPanel canEdit={canEdit} /> : null}
       </section>
     </>
   );

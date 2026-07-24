@@ -83,13 +83,13 @@ export function FinancialReportsPanel() {
   const flagTotal = report ? Object.values(report.controlFlags).reduce((sum, value) => sum + value, 0) : 0;
 
   return (
-    <section className="staff-list-section" aria-labelledby="financial-reports-title">
+    <section className="finance-section" aria-labelledby="financial-reports-title">
       <div className="section-heading">
         <div>
-          <h2 id="financial-reports-title">Relatórios financeiros</h2>
-          <p>Vendas, take rate, obrigações com profissionais, assinaturas, eventos e trilha de auditoria em um contrato único.</p>
+          <h2 id="financial-reports-title">Visão geral</h2>
+          <p>Vendas, take rate e carteira.</p>
         </div>
-        <div className="header-actions">
+        <div className="header-actions finance-filter-row">
           <label><span className="sr-only">Início</span><input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} /></label>
           <label><span className="sr-only">Fim</span><input type="date" value={to} min={from} max={today} onChange={(event) => setTo(event.target.value)} /></label>
           <button className="button secondary" type="button" onClick={() => query.refetch()} disabled={query.isFetching || !from || !to || from > to}>
@@ -110,14 +110,14 @@ export function FinancialReportsPanel() {
         <>
           <div className="reports-grid">
             <article className="report-metric">
-              <div><span>GMV confirmado</span><TrendingUp size={18} /></div>
+              <div><span>GMV</span><TrendingUp size={18} /></div>
               <strong>{formatCurrencyExact(summary.gross_revenue)}</strong>
               <p>{formatNumber(summary.successful_transactions)} pagamentos · ticket médio {formatCurrencyExact(summary.average_ticket)}</p>
             </article>
             <article className="report-metric">
-              <div><span>Take rate líquido</span><Percent size={18} /></div>
+              <div><span>Take rate</span><Percent size={18} /></div>
               <strong>{formatPercent(summary.take_rate_net_percent)}</strong>
-              <p>{formatCurrencyExact(summary.platform_commission)} de comissão OnlyFit</p>
+              <p>{formatCurrencyExact(summary.platform_commission)} OnlyFit</p>
             </article>
             <article className="report-metric">
               <div><span>Profissionais</span><HandCoins size={18} /></div>
@@ -134,34 +134,36 @@ export function FinancialReportsPanel() {
           {summary.synthetic_transactions > 0 ? (
             <div className="inline-alert soft" role="status">
               <ReceiptText size={18} />
-              {formatNumber(summary.synthetic_transactions)} transação sintética marcada como teste está incluída neste período.
+              Teste incluído: {formatNumber(summary.synthetic_transactions)} transação sintética.
             </div>
           ) : null}
 
           <div className="report-columns">
             <div className="report-block">
-              <h3>Resumo econômico</h3>
+              <h3>Economia</h3>
               <dl className="status-list">
-                <div><dt>Receita líquida Asaas</dt><dd>{formatCurrencyExact(summary.net_revenue)}</dd></div>
+                <div><dt>Líquido Asaas</dt><dd>{formatCurrencyExact(summary.net_revenue)}</dd></div>
                 <div><dt>Taxas Asaas</dt><dd>{formatCurrencyExact(summary.asaas_fees)} · {formatPercent(summary.asaas_fee_rate_percent)}</dd></div>
                 <div><dt>Take rate bruto</dt><dd>{formatPercent(summary.take_rate_gross_percent)}</dd></div>
-                <div><dt>Participação profissional</dt><dd>{formatPercent(summary.professional_share_net_percent)}</dd></div>
+                <div><dt>Profissional</dt><dd>{formatPercent(summary.professional_share_net_percent)}</dd></div>
                 <div><dt>MRR ativo</dt><dd>{formatCurrencyExact(summary.active_subscription_mrr)}</dd></div>
               </dl>
             </div>
             <div className="report-block">
-              <h3>Liquidação e carteira</h3>
+              <h3>Carteira</h3>
               <dl className="status-list">
-                <div><dt>Carteira disponível</dt><dd>{formatCurrencyExact(summary.wallet_available)}</dd></div>
-                <div><dt>Carteira pendente</dt><dd>{formatCurrencyExact(summary.wallet_pending)}</dd></div>
-                <div><dt>Carteira reservada</dt><dd>{formatCurrencyExact(summary.wallet_reserved)}</dd></div>
+                <div><dt>Disponível</dt><dd>{formatCurrencyExact(summary.wallet_available)}</dd></div>
+                <div><dt>Pendente</dt><dd>{formatCurrencyExact(summary.wallet_pending)}</dd></div>
+                <div><dt>Reservada</dt><dd>{formatCurrencyExact(summary.wallet_reserved)}</dd></div>
                 <div><dt>Resgates abertos</dt><dd>{formatNumber(summary.open_payout_count)} · {formatCurrencyExact(summary.open_payout_amount)}</dd></div>
                 <div><dt>Resgates pagos</dt><dd>{formatNumber(summary.paid_payout_count)} · {formatCurrencyExact(summary.paid_payout_amount)}</dd></div>
               </dl>
             </div>
           </div>
 
-          <div className="table-wrapper">
+          <div className="finance-table-block">
+            <h3>Por oferta</h3>
+            <div className="table-wrapper">
             <table className="staff-table">
               <thead><tr><th>Tipo de oferta</th><th>Vendas</th><th>Bruto</th><th>Comissão</th><th>Profissional</th><th>Take rate</th></tr></thead>
               <tbody>
@@ -177,9 +179,12 @@ export function FinancialReportsPanel() {
                 )) : <tr><td colSpan={6}>Nenhuma venda confirmada no período.</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
 
-          <div className="table-wrapper">
+          <div className="finance-table-block">
+            <h3>Por profissional</h3>
+            <div className="table-wrapper">
             <table className="staff-table">
               <thead><tr><th>Profissional</th><th>Vendas</th><th>Bruto</th><th>Comissão</th><th>A liquidar</th><th>Disponível</th><th>Take rate</th></tr></thead>
               <tbody>
@@ -196,9 +201,10 @@ export function FinancialReportsPanel() {
                 )) : <tr><td colSpan={7}>Nenhum profissional com venda confirmada no período.</td></tr>}
               </tbody>
             </table>
+            </div>
           </div>
 
-          <div className="report-columns">
+          <div className="finance-mini-grid">
             <ReportList title="Liquidação" rows={report.settlementByStatus} labelKey="settlement_status" countKey="transactions_count" amountKey="professional_net" />
             <ReportList title="Assinaturas" rows={report.subscriptionStatuses} labelKey="status" countKey="subscriptions_count" amountKey="total_value" />
             <ReportList title="Payouts" rows={report.payoutStatuses} labelKey="status" countKey="payouts_count" amountKey="total_amount" />
@@ -207,7 +213,7 @@ export function FinancialReportsPanel() {
             <ReportList title="Livro razão" rows={report.journalAccounts} labelKey="code" countKey="credits" amountKey="balance" amountLabel="saldo" />
           </div>
 
-          <p className="muted-copy">Atualizado em {formatDateTime(new Date(report.generatedAt))}. Valores vêm de RPC staff com RLS e trilha financeira sem expor segredos ou dados completos de cartão/PIX.</p>
+          <p className="muted-copy">Atualizado em {formatDateTime(new Date(report.generatedAt))}.</p>
         </>
       ) : null}
     </section>
@@ -269,14 +275,14 @@ export function FinancialReconciliationPanel({ canEdit }: { canEdit: boolean }) 
   const parsedTreasuryAmount = Number(treasuryAmount.replace(',', '.'));
 
   return (
-    <section className="staff-list-section" aria-labelledby="financial-reconciliation-title">
+    <section className="finance-section" aria-labelledby="financial-reconciliation-title">
       <div className="section-heading">
         <div>
-          <h2 id="financial-reconciliation-title">Conciliação financeira</h2>
-          <p>Compara o extrato Asaas com o livro razão e abre exceções para revisão.</p>
+          <h2 id="financial-reconciliation-title">Conciliação</h2>
+          <p>Extrato Asaas x livro razão.</p>
         </div>
         {canEdit ? (
-          <div className="header-actions">
+          <div className="header-actions finance-filter-row">
             <label><span className="sr-only">Início</span><input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} /></label>
             <label><span className="sr-only">Fim</span><input type="date" value={to} min={from} max={today} onChange={(event) => setTo(event.target.value)} /></label>
             <button className="button" type="button" disabled={run.isPending || !from || !to || from > to} onClick={() => run.mutate({ from, to })}>
@@ -287,16 +293,17 @@ export function FinancialReconciliationPanel({ canEdit }: { canEdit: boolean }) 
         ) : null}
       </div>
       {run.isError ? <div className="inline-alert danger" role="alert"><AlertTriangle size={18} />Não foi possível executar a conciliação.</div> : null}
-      {canEdit ? <form className="staff-form" onSubmit={(event) => {
+      {canEdit ? <form className="finance-treasury-form" onSubmit={(event) => {
         event.preventDefault();
         if (!Number.isFinite(parsedTreasuryAmount) || parsedTreasuryAmount <= 0 || !treasuryReference.trim()) return;
         treasury.mutate({ direction: treasuryDirection, amount: parsedTreasuryAmount, reference: treasuryReference.trim() }, {
           onSuccess: () => { setTreasuryAmount(''); setTreasuryReference(''); },
         });
       }}>
-        <label><span>Tesouraria</span><select value={treasuryDirection} onChange={(event) => setTreasuryDirection(event.target.value as 'invest' | 'redeem')}><option value="invest">Aplicar liquidez</option><option value="redeem">Resgatar liquidez</option></select></label>
-        <label><span>Valor (R$)</span><input inputMode="decimal" value={treasuryAmount} onChange={(event) => setTreasuryAmount(event.target.value.replace(/[^\d,.]/g, ''))} /></label>
-        <label><span>Referência bancária</span><input value={treasuryReference} maxLength={128} onChange={(event) => setTreasuryReference(event.target.value)} /></label>
+        <strong>Tesouraria</strong>
+        <select value={treasuryDirection} onChange={(event) => setTreasuryDirection(event.target.value as 'invest' | 'redeem')}><option value="invest">Aplicar liquidez</option><option value="redeem">Resgatar liquidez</option></select>
+        <input aria-label="Valor" placeholder="Valor" inputMode="decimal" value={treasuryAmount} onChange={(event) => setTreasuryAmount(event.target.value.replace(/[^\d,.]/g, ''))} />
+        <input aria-label="Referência bancária" placeholder="Referência bancária" value={treasuryReference} maxLength={128} onChange={(event) => setTreasuryReference(event.target.value)} />
         <button className="button secondary" type="submit" disabled={treasury.isPending || !Number.isFinite(parsedTreasuryAmount) || parsedTreasuryAmount <= 0 || !treasuryReference.trim()}>Registrar</button>
       </form> : null}
       {treasury.isError ? <div className="inline-alert danger" role="alert"><AlertTriangle size={18} />Não foi possível registrar a movimentação de tesouraria.</div> : null}
@@ -304,7 +311,7 @@ export function FinancialReconciliationPanel({ canEdit }: { canEdit: boolean }) 
         <div className="table-wrapper"><table className="staff-table"><thead><tr><th>Período</th><th>Status</th><th>Exceções</th><th>Executada</th></tr></thead><tbody>
           {runs.data.map((item) => <tr key={item.id}><td>{formatDay(item.period_start)} a {formatDay(item.period_end)}</td><td><span className={`role-badge role-${item.status}`}>{item.status === 'completed' ? 'Concluída' : item.status === 'failed' ? 'Falhou' : 'Aberta'}</span></td><td>{item.exception_count}</td><td>{formatDateTime(new Date(item.created_at))}</td></tr>)}
         </tbody></table></div>
-      ) : <p className="muted-copy">Nenhuma conciliação executada.</p>}
+      ) : <div className="finance-empty-row">Nenhuma conciliação executada.</div>}
     </section>
   );
 }
@@ -413,11 +420,11 @@ export function PayoutQueuePanel({ canEdit }: { canEdit: boolean }) {
   const days = daysQuery.data ?? [];
 
   return (
-    <section className="staff-list-section" aria-labelledby="payout-queue-title">
+    <section className="finance-section" aria-labelledby="payout-queue-title">
       <div className="section-heading">
         <div>
-          <h2 id="payout-queue-title">Fila de liquidação</h2>
-          <p>Resgates manuais por dia de liquidação. A aprovação, a evidência bancária e a baixa são auditadas.</p>
+          <h2 id="payout-queue-title">Liquidação</h2>
+          <p>Resgates manuais e lotes.</p>
         </div>
         <button className="button secondary" type="button" onClick={() => daysQuery.refetch()} disabled={daysQuery.isFetching}>
           <RefreshCw className={daysQuery.isFetching ? 'spin' : ''} size={16} />
@@ -433,11 +440,11 @@ export function PayoutQueuePanel({ canEdit }: { canEdit: boolean }) {
       ) : daysQuery.isLoading ? (
         <div className="skeleton staff-skeleton" />
       ) : days.length === 0 ? (
-        <div className="access-panel inline-access" role="status">
+        <div className="finance-empty-state" role="status">
           <div className="status-icon"><HandCoins size={24} /></div>
           <div>
-            <h2>Nenhum resgate pendente</h2>
-            <p>Quando um profissional solicitar resgate, o dia de liquidação aparece aqui com o total a liquidar.</p>
+            <h2>Sem resgates</h2>
+            <p>A fila aparece quando houver solicitação.</p>
           </div>
         </div>
       ) : (
@@ -708,13 +715,13 @@ export function TransactionsPanel() {
   const maxPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
 
   return (
-    <section className="staff-list-section" aria-labelledby="transactions-title">
+    <section className="finance-section" aria-labelledby="transactions-title">
       <div className="section-heading">
         <div>
           <h2 id="transactions-title">Transações</h2>
-          <p>Cobranças, liquidações, estornos e chargebacks para auditoria e suporte.</p>
+          <p>Cobranças, liquidações e estornos.</p>
         </div>
-        <div className="header-actions">
+        <div className="header-actions finance-filter-row">
           <select
             value={status}
             onChange={(event) => { setStatus(event.target.value as TransactionStatus | ''); setPage(0); }}
@@ -744,11 +751,11 @@ export function TransactionsPanel() {
       ) : query.isLoading ? (
         <div className="skeleton staff-skeleton" />
       ) : items.length === 0 ? (
-        <div className="access-panel inline-access" role="status">
+        <div className="finance-empty-state" role="status">
           <div className="status-icon"><ReceiptText size={24} /></div>
           <div>
             <h2>Nenhuma transação</h2>
-            <p>Assim que as cobranças começarem, elas aparecem aqui com valor bruto, taxa, comissão e líquido.</p>
+            <p>As cobranças aparecem aqui.</p>
           </div>
         </div>
       ) : (
@@ -821,49 +828,44 @@ function AsaasEnvironmentForm({ environment, canEdit }: { environment: AsaasEnvi
   if (!canEdit) return null;
 
   return (
-    <form
-      className="staff-form"
-      style={{ marginTop: '0.75rem' }}
-      onSubmit={(event) => { event.preventDefault(); void save(); }}
-    >
-      <label>
-        <span>Nova API key ({environment === 'production' ? 'Produção' : 'Sandbox'})</span>
+    <details className="finance-secret-details">
+      <summary>{environment === 'production' ? 'Produção' : 'Sandbox'}</summary>
+      <form
+        className="finance-secret-form"
+        onSubmit={(event) => { event.preventDefault(); void save(); }}
+      >
         <input
+          aria-label={`API key ${environment === 'production' ? 'produção' : 'sandbox'}`}
           type="password"
           autoComplete="off"
           value={apiKey}
           onChange={(event) => setApiKey(event.target.value)}
-          placeholder="aact_..."
+          placeholder="API key"
         />
-        <small>Fica só no servidor; nunca é exibida depois de salva.</small>
-      </label>
-      <label>
-        <span>Novo token de webhook</span>
         <input
+          aria-label="Token de webhook"
           type="password"
           autoComplete="off"
           value={webhookToken}
           onChange={(event) => setWebhookToken(event.target.value)}
-          placeholder="whsec_..."
+          placeholder="Webhook token"
         />
-      </label>
-      <div className="header-actions">
         <button
           className="button"
           type="submit"
           disabled={mutation.isPending || (!apiKey.trim() && !webhookToken.trim())}
         >
           <Save size={16} />
-          Salvar {environment === 'production' ? 'produção' : 'sandbox'}
+          Salvar
         </button>
-      </div>
+      </form>
       {mutation.isError ? (
         <div className="inline-alert danger" role="alert">
           <AlertTriangle size={18} />
-          Não foi possível salvar as credenciais.
+          Não foi possível salvar.
         </div>
       ) : null}
-    </form>
+    </details>
   );
 }
 
@@ -872,14 +874,11 @@ export function AsaasIntegrationPanel({ canEdit }: { canEdit: boolean }) {
   const environments = query.data ?? [];
 
   return (
-    <section className="staff-list-section" aria-labelledby="asaas-integration-title">
+    <section className="finance-section" aria-labelledby="asaas-integration-title">
       <div className="section-heading">
         <div>
-          <h2 id="asaas-integration-title">Integração Asaas</h2>
-          <p>
-            As chaves têm prioridade por variável de ambiente (Supabase secret). Configure aqui apenas se precisar
-            operar sem redeploy. O valor nunca é exibido — só o status e os últimos dígitos.
-          </p>
+          <h2 id="asaas-integration-title">Asaas</h2>
+          <p>Secrets e webhook.</p>
         </div>
         <button className="button secondary" type="button" onClick={() => query.refetch()} disabled={query.isFetching}>
           <RefreshCw className={query.isFetching ? 'spin' : ''} size={16} />
@@ -930,8 +929,12 @@ export function AsaasIntegrationPanel({ canEdit }: { canEdit: boolean }) {
         </div>
       )}
 
-      <AsaasEnvironmentForm environment="production" canEdit={canEdit} />
-      <AsaasEnvironmentForm environment="sandbox" canEdit={canEdit} />
+      {canEdit ? (
+        <div className="finance-secret-grid">
+          <AsaasEnvironmentForm environment="production" canEdit={canEdit} />
+          <AsaasEnvironmentForm environment="sandbox" canEdit={canEdit} />
+        </div>
+      ) : null}
     </section>
   );
 }
