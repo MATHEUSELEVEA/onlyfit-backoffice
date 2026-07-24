@@ -603,34 +603,98 @@ svg text {
 }
 
 .offering-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 12px;
 }
 
-.offering-row {
+.offering-type-overview {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(520px, 660px);
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.offering-type-overview article {
+  min-width: 0;
   border: 1px solid rgb(var(--color-outline-variant));
-  border-radius: 12px;
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container));
+  padding: 14px;
+}
+
+.offering-type-overview span {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.offering-type-overview strong {
+  display: block;
+  margin-top: 10px;
+  color: rgb(var(--color-on-surface));
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.offering-row {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
   background: rgb(var(--color-surface-container));
   padding: 18px;
+}
+
+.offering-row::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: rgb(var(--color-primary));
+  opacity: 0.9;
+}
+
+.offering-row.is-dirty::before {
+  background: rgb(var(--color-tertiary));
 }
 
 .offering-main {
   min-width: 0;
 }
 
+.offering-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .offering-main strong {
   display: block;
   color: rgb(var(--color-on-surface));
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.25;
 }
 
-.offering-main span {
+.offering-title-row > span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgb(var(--color-primary) / 0.12);
+  color: rgb(var(--color-primary));
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.offering-main > span {
   display: block;
-  margin-top: 6px;
+  margin-top: 8px;
   color: rgb(var(--color-on-surface-variant));
   font-size: 13px;
   line-height: 1.45;
@@ -653,15 +717,76 @@ svg text {
   font-weight: 700;
 }
 
+.offering-rule-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.offering-rule-strip div {
+  min-width: 0;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  padding: 12px;
+}
+
+.offering-rule-strip span {
+  display: block;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.offering-rule-strip strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 8px;
+  color: rgb(var(--color-on-surface));
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offering-edit-details {
+  border-top: 1px solid rgb(var(--color-outline-variant));
+  padding-top: 12px;
+}
+
+.offering-edit-details summary {
+  cursor: pointer;
+  color: rgb(var(--color-on-surface));
+  font-size: 13px;
+  font-weight: 800;
+  list-style: none;
+}
+
+.offering-edit-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.offering-edit-details summary::after {
+  content: '+';
+  float: right;
+  color: rgb(var(--color-primary));
+}
+
+.offering-edit-details[open] summary::after {
+  content: '-';
+}
+
 .billing-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   align-items: end;
   gap: 10px;
+  margin-top: 12px;
 }
 
 .billing-controls button {
-  min-height: 44px;
+  min-height: 40px;
   white-space: nowrap;
 }
 
@@ -680,7 +805,7 @@ svg text {
 
 .billing-controls select,
 .billing-controls input {
-  min-height: 44px;
+  min-height: 40px;
   width: 100%;
   border: 1px solid rgb(var(--color-outline-variant));
   border-radius: 10px;
@@ -702,16 +827,11 @@ svg text {
   opacity: 0.55;
 }
 
-.billing-summary,
 .row-message {
   grid-column: 1 / -1;
   margin: 0;
   color: rgb(var(--color-on-surface-variant));
   font-size: 13px;
-}
-
-.billing-summary strong {
-  color: rgb(var(--color-on-surface));
 }
 
 .row-message {
@@ -1991,6 +2111,14 @@ svg text {
   }
 
   .offering-row {
+    padding: 16px;
+  }
+
+  .offering-list {
+    grid-template-columns: 1fr;
+  }
+
+  .offering-rule-strip {
     grid-template-columns: 1fr;
   }
 
