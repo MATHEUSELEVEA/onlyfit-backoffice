@@ -21,7 +21,7 @@ import {
   type SettlementStatus,
   type TransactionStatus,
 } from '../lib/paymentTransactions';
-import type { AsaasEnvironment } from '../lib/asaasIntegration';
+import type { AsaasEnvironment, AsaasEnvironmentStatus } from '../lib/asaasIntegration';
 import {
   usePayoutQueueDay,
   usePayoutQueueDays,
@@ -874,7 +874,7 @@ export function TransactionsPanel() {
 // -----------------------------------------------------------------------------
 // Integração do provedor de pagamentos.
 // -----------------------------------------------------------------------------
-function AsaasEnvironmentForm({ environment, canEdit }: { environment: AsaasEnvironment; canEdit: boolean }) {
+function ProviderCredentialEditor({ environment }: { environment: AsaasEnvironment }) {
   const [apiKey, setApiKey] = useState('');
   const [webhookToken, setWebhookToken] = useState('');
   const mutation = useSetAsaasCredentials();
@@ -890,13 +890,11 @@ function AsaasEnvironmentForm({ environment, canEdit }: { environment: AsaasEnvi
     setWebhookToken('');
   }
 
-  if (!canEdit) return null;
-
   return (
-    <details className="finance-secret-details">
-      <summary>{environment === 'production' ? 'Produção' : 'Sandbox'}</summary>
+    <details className="provider-secret-details">
+      <summary>Atualizar credenciais</summary>
       <form
-        className="finance-secret-form"
+        className="provider-secret-form"
         onSubmit={(event) => { event.preventDefault(); void save(); }}
       >
         <input
@@ -916,7 +914,7 @@ function AsaasEnvironmentForm({ environment, canEdit }: { environment: AsaasEnvi
           placeholder="Webhook token"
         />
         <button
-          className="button"
+          className="button primary"
           type="submit"
           disabled={mutation.isPending || (!apiKey.trim() && !webhookToken.trim())}
         >
@@ -934,9 +932,52 @@ function AsaasEnvironmentForm({ environment, canEdit }: { environment: AsaasEnvi
   );
 }
 
+function ProviderStatusPill({ configured, label, suffix }: { configured: boolean; label: string; suffix?: string | null }) {
+  return (
+    <span className={`provider-status-pill ${configured ? 'configured' : 'missing'}`}>
+      {configured ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+      <b>{label}</b>
+      <small>{configured ? (suffix ? `•••• ${suffix}` : 'ativo') : 'pendente'}</small>
+    </span>
+  );
+}
+
+function ProviderEnvironmentCard({
+  env,
+  canEdit,
+}: {
+  env: AsaasEnvironmentStatus;
+  canEdit: boolean;
+}) {
+  const configuredCount = Number(env.api_key_configured) + Number(env.webhook_token_configured);
+  const ready = configuredCount === 2;
+
+  return (
+    <article className={`provider-card ${ready ? 'ready' : 'attention'}`}>
+      <div className="provider-card-head">
+        <div>
+          <span>{env.environment === 'production' ? 'Produção' : 'Sandbox'}</span>
+          <h3>{ready ? 'Pronto' : 'Configurar'}</h3>
+        </div>
+        <KeyRound size={18} />
+      </div>
+      <div className="provider-card-body">
+        <ProviderStatusPill configured={env.api_key_configured} label="API key" suffix={env.api_key_last4} />
+        <ProviderStatusPill configured={env.webhook_token_configured} label="Webhook" />
+      </div>
+      <div className="provider-card-foot">
+        <span>{env.updated_at ? formatDateTime(new Date(env.updated_at)) : 'Nunca atualizado'}</span>
+      </div>
+      {canEdit ? <ProviderCredentialEditor environment={env.environment} /> : null}
+    </article>
+  );
+}
+
 export function ProviderIntegrationPanel({ canEdit }: { canEdit: boolean }) {
   const query = useAsaasIntegrationStatus(true);
-  const environments = query.data ?? [];
+  const environments = [...(query.data ?? [])].sort((a, b) => (
+    a.environment === 'production' ? -1 : b.environment === 'production' ? 1 : 0
+  ));
 
   return (
     <section className="finance-section" aria-labelledby="provider-integration-title">
@@ -958,48 +999,21 @@ export function ProviderIntegrationPanel({ canEdit }: { canEdit: boolean }) {
         </div>
       ) : query.isLoading ? (
         <div className="skeleton staff-skeleton" />
+      ) : environments.length ? (
+        <div className="provider-grid">
+          {environments.map((env) => (
+            <ProviderEnvironmentCard key={env.environment} env={env} canEdit={canEdit} />
+          ))}
+        </div>
       ) : (
-        <div className="table-wrapper">
-          <table className="staff-table">
-            <thead>
-              <tr>
-                <th>Ambiente</th>
-                <th>API key</th>
-                <th>Token webhook</th>
-                <th>Atualizado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {environments.map((env) => (
-                <tr key={env.environment}>
-                  <td>
-                    <strong>{env.environment === 'production' ? 'Produção' : 'Sandbox'}</strong>
-                    <span><KeyRound size={12} /> {env.environment}</span>
-                  </td>
-                  <td>
-                    {env.api_key_configured
-                      ? <span className="role-badge role-super_admin">Configurada •••• {env.api_key_last4 ?? ''}</span>
-                      : <span className="role-badge role-support">Não configurada</span>}
-                  </td>
-                  <td>
-                    {env.webhook_token_configured
-                      ? <span className="role-badge role-super_admin">Configurado</span>
-                      : <span className="role-badge role-support">Não configurado</span>}
-                  </td>
-                  <td>{env.updated_at ? formatDateTime(new Date(env.updated_at)) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="finance-empty-state" role="status">
+          <div className="status-icon"><KeyRound size={24} /></div>
+          <div>
+            <h2>Nenhum ambiente</h2>
+            <p>Configure o provedor para começar.</p>
+          </div>
         </div>
       )}
-
-      {canEdit ? (
-        <div className="finance-secret-grid">
-          <AsaasEnvironmentForm environment="production" canEdit={canEdit} />
-          <AsaasEnvironmentForm environment="sandbox" canEdit={canEdit} />
-        </div>
-      ) : null}
     </section>
   );
 }

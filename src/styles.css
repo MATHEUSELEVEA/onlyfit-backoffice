@@ -1057,6 +1057,155 @@ svg text {
   padding: 12px;
 }
 
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.provider-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container));
+  padding: 18px;
+}
+
+.provider-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: rgb(var(--color-primary));
+  opacity: 0.95;
+}
+
+.provider-card.attention::before {
+  background: rgb(var(--color-error));
+}
+
+.provider-card-head,
+.provider-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.provider-card-head span,
+.provider-card-foot span {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.provider-card-head h3 {
+  margin: 4px 0 0;
+  color: rgb(var(--color-on-surface));
+  font-size: 22px;
+  line-height: 1;
+}
+
+.provider-card-head svg {
+  color: rgb(var(--color-primary));
+}
+
+.provider-card.attention .provider-card-head svg {
+  color: rgb(var(--color-error));
+}
+
+.provider-card-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.provider-status-pill {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 8px;
+  align-items: center;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  padding: 12px;
+}
+
+.provider-status-pill svg {
+  color: rgb(var(--color-error));
+}
+
+.provider-status-pill.configured svg {
+  color: rgb(var(--color-primary));
+}
+
+.provider-status-pill b {
+  overflow: hidden;
+  color: rgb(var(--color-on-surface));
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-status-pill small {
+  grid-column: 2;
+  overflow: hidden;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-secret-details {
+  border-top: 1px solid rgb(var(--color-outline-variant));
+  padding-top: 12px;
+}
+
+.provider-secret-details summary {
+  cursor: pointer;
+  color: rgb(var(--color-on-surface));
+  font-size: 13px;
+  font-weight: 800;
+  list-style: none;
+}
+
+.provider-secret-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.provider-secret-details summary::after {
+  content: '+';
+  float: right;
+  color: rgb(var(--color-primary));
+}
+
+.provider-secret-details[open] summary::after {
+  content: '-';
+}
+
+.provider-secret-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.provider-secret-form input {
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 8px;
+  background: rgb(var(--color-surface-container-lowest));
+  color: rgb(var(--color-on-surface));
+  padding: 0 10px;
+}
+
 .staff-create-copy {
   display: flex;
   align-items: flex-start;
@@ -1741,7 +1890,12 @@ svg text {
   }
 
   .finance-treasury-form,
-  .finance-secret-form {
+  .finance-secret-form,
+  .provider-secret-form {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-card-body {
     grid-template-columns: 1fr;
   }
 }
