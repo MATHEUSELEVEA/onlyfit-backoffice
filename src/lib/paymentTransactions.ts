@@ -7,7 +7,13 @@ export type SettlementStatus =
 
 export type PaymentTransaction = {
   id: string;
+  provider: 'asaas' | 'stripe';
+  payment_method: 'card' | 'pix' | null;
+  provider_payment_id: string;
   asaas_payment_id: string;
+  stripe_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_invoice_id: string | null;
   offering_id: string;
   offering_name: string;
   billing_type: 'one_time' | 'recurring';
@@ -18,14 +24,18 @@ export type PaymentTransaction = {
   gross_value: number;
   net_value: number | null;
   asaas_fee: number | null;
+  provider_fee: number | null;
   platform_commission: number | null;
   professional_net: number | null;
   status: TransactionStatus;
   settlement_status: SettlementStatus;
+  provider_status: string | null;
   card_brand: string | null;
   card_last4: string | null;
   estimated_credit_date: string | null;
   credit_date: string | null;
+  expires_at: string | null;
+  invoice_url: string | null;
   created_at: string;
 };
 
@@ -71,7 +81,13 @@ function parseTransaction(value: unknown): PaymentTransaction {
   const row = asRecord(value);
   return {
     id: String(row.id ?? ''),
+    provider: row.provider === 'stripe' ? 'stripe' : 'asaas',
+    payment_method: row.payment_method === 'card' || row.payment_method === 'pix' ? row.payment_method : null,
+    provider_payment_id: String(row.provider_payment_id ?? row.asaas_payment_id ?? row.stripe_payment_intent_id ?? row.stripe_invoice_id ?? ''),
     asaas_payment_id: String(row.asaas_payment_id ?? ''),
+    stripe_session_id: stringOrNull(row.stripe_session_id),
+    stripe_payment_intent_id: stringOrNull(row.stripe_payment_intent_id),
+    stripe_invoice_id: stringOrNull(row.stripe_invoice_id),
     offering_id: String(row.offering_id ?? ''),
     offering_name: String(row.offering_name ?? '—'),
     billing_type: row.billing_type === 'recurring' ? 'recurring' : 'one_time',
@@ -82,16 +98,20 @@ function parseTransaction(value: unknown): PaymentTransaction {
     gross_value: numberFrom(row.gross_value),
     net_value: numberOrNull(row.net_value),
     asaas_fee: numberOrNull(row.asaas_fee),
+    provider_fee: numberOrNull(row.provider_fee ?? row.asaas_fee),
     platform_commission: numberOrNull(row.platform_commission),
     professional_net: numberOrNull(row.professional_net),
     status: TX_STATUSES.includes(row.status as TransactionStatus) ? (row.status as TransactionStatus) : 'created',
     settlement_status: SETTLE_STATUSES.includes(row.settlement_status as SettlementStatus)
       ? (row.settlement_status as SettlementStatus)
       : 'pending',
+    provider_status: stringOrNull(row.provider_status),
     card_brand: stringOrNull(row.card_brand),
     card_last4: stringOrNull(row.card_last4),
     estimated_credit_date: stringOrNull(row.estimated_credit_date),
     credit_date: stringOrNull(row.credit_date),
+    expires_at: stringOrNull(row.expires_at),
+    invoice_url: stringOrNull(row.invoice_url),
     created_at: String(row.created_at ?? ''),
   };
 }

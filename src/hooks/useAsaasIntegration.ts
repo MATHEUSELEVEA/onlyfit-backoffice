@@ -17,7 +17,14 @@ export function useAsaasIntegrationStatus(enabled: boolean) {
 export function useSetAsaasCredentials() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { environment: AsaasEnvironment; apiKey?: string | null; webhookToken?: string | null }) =>
+    mutationFn: (input: {
+      environment: AsaasEnvironment;
+      apiKey?: string | null;
+      webhookToken?: string | null;
+      stripePublishableKey?: string | null;
+      stripeSecretKey?: string | null;
+      stripeWebhookSecret?: string | null;
+    }) =>
       setAsaasCredentials(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['asaas-integration-status'] });

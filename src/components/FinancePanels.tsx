@@ -831,6 +831,7 @@ export function TransactionsPanel() {
                 <tr>
                   <th>Data</th>
                   <th>Oferta</th>
+                  <th>Provedor</th>
                   <th>Profissional</th>
                   <th>Comprador</th>
                   <th>Bruto</th>
@@ -848,10 +849,14 @@ export function TransactionsPanel() {
                       <strong>{tx.offering_name}</strong>
                       <span>{tx.billing_type === 'recurring' ? 'Assinatura' : 'Única'}</span>
                     </td>
+                    <td>
+                      <strong>{tx.provider === 'stripe' ? 'Stripe' : 'Asaas'}</strong>
+                      <span>{tx.payment_method === 'pix' ? 'PIX' : tx.payment_method === 'card' ? 'Cartão' : '—'}</span>
+                    </td>
                     <td>{tx.professional_name}</td>
                     <td>{tx.buyer_name}</td>
                     <td>{formatCurrencyExact(tx.gross_value)}</td>
-                    <td>{tx.asaas_fee != null ? formatCurrencyExact(tx.asaas_fee) : '—'}</td>
+                    <td>{tx.provider_fee != null ? formatCurrencyExact(tx.provider_fee) : '—'}</td>
                     <td>{tx.platform_commission != null ? formatCurrencyExact(tx.platform_commission) : '—'}</td>
                     <td>{tx.professional_net != null ? formatCurrencyExact(tx.professional_net) : '—'}</td>
                     <td><span className={`role-badge role-${tx.status}`}>{transactionStatusLabel(tx.status)}</span></td>
@@ -877,18 +882,40 @@ export function TransactionsPanel() {
 function ProviderCredentialEditor({ environment }: { environment: AsaasEnvironment }) {
   const [apiKey, setApiKey] = useState('');
   const [webhookToken, setWebhookToken] = useState('');
+  const [stripePublishableKey, setStripePublishableKey] = useState('');
+  const [stripeSecretKey, setStripeSecretKey] = useState('');
+  const [stripeWebhookSecret, setStripeWebhookSecret] = useState('');
   const mutation = useSetAsaasCredentials();
 
   async function save() {
-    if (!apiKey.trim() && !webhookToken.trim()) return;
+    if (
+      !apiKey.trim() &&
+      !webhookToken.trim() &&
+      !stripePublishableKey.trim() &&
+      !stripeSecretKey.trim() &&
+      !stripeWebhookSecret.trim()
+    ) return;
     await mutation.mutateAsync({
       environment,
       apiKey: apiKey.trim() || null,
       webhookToken: webhookToken.trim() || null,
+      stripePublishableKey: stripePublishableKey.trim() || null,
+      stripeSecretKey: stripeSecretKey.trim() || null,
+      stripeWebhookSecret: stripeWebhookSecret.trim() || null,
     });
     setApiKey('');
     setWebhookToken('');
+    setStripePublishableKey('');
+    setStripeSecretKey('');
+    setStripeWebhookSecret('');
   }
+  const canSubmit = Boolean(
+    apiKey.trim() ||
+    webhookToken.trim() ||
+    stripePublishableKey.trim() ||
+    stripeSecretKey.trim() ||
+    stripeWebhookSecret.trim(),
+  );
 
   return (
     <details className="provider-secret-details">
@@ -903,20 +930,44 @@ function ProviderCredentialEditor({ environment }: { environment: AsaasEnvironme
           autoComplete="off"
           value={apiKey}
           onChange={(event) => setApiKey(event.target.value)}
-          placeholder="API key"
+          placeholder="Asaas API key"
         />
         <input
-          aria-label="Token de webhook"
+          aria-label="Token de webhook Asaas"
           type="password"
           autoComplete="off"
           value={webhookToken}
           onChange={(event) => setWebhookToken(event.target.value)}
-          placeholder="Webhook token"
+          placeholder="Asaas webhook token"
+        />
+        <input
+          aria-label="Stripe publishable key"
+          type="password"
+          autoComplete="off"
+          value={stripePublishableKey}
+          onChange={(event) => setStripePublishableKey(event.target.value)}
+          placeholder="Stripe publishable key"
+        />
+        <input
+          aria-label="Stripe secret key"
+          type="password"
+          autoComplete="off"
+          value={stripeSecretKey}
+          onChange={(event) => setStripeSecretKey(event.target.value)}
+          placeholder="Stripe secret key"
+        />
+        <input
+          aria-label="Stripe webhook secret"
+          type="password"
+          autoComplete="off"
+          value={stripeWebhookSecret}
+          onChange={(event) => setStripeWebhookSecret(event.target.value)}
+          placeholder="Stripe webhook secret"
         />
         <button
           className="button primary"
           type="submit"
-          disabled={mutation.isPending || (!apiKey.trim() && !webhookToken.trim())}
+          disabled={mutation.isPending || !canSubmit}
         >
           <Save size={16} />
           Salvar
@@ -949,24 +1000,29 @@ function ProviderEnvironmentCard({
   env: AsaasEnvironmentStatus;
   canEdit: boolean;
 }) {
-  const configuredCount = Number(env.api_key_configured) + Number(env.webhook_token_configured);
-  const ready = configuredCount === 2;
+  const asaasReady = env.asaas_api_key_configured && env.asaas_webhook_token_configured;
+  const stripeReady = env.stripe_publishable_key_configured && env.stripe_secret_key_configured && env.stripe_webhook_secret_configured;
+  const ready = asaasReady && stripeReady;
 
   return (
     <article className={`provider-card ${ready ? 'ready' : 'attention'}`}>
       <div className="provider-card-head">
         <div>
           <span>{env.environment === 'production' ? 'Produção' : 'Sandbox'}</span>
-          <h3>{ready ? 'Pronto' : 'Configurar'}</h3>
+          <h3>{ready ? 'Stripe + Asaas prontos' : 'Configurar provedores'}</h3>
         </div>
         <KeyRound size={18} />
       </div>
       <div className="provider-card-body">
-        <ProviderStatusPill configured={env.api_key_configured} label="API key" suffix={env.api_key_last4} />
-        <ProviderStatusPill configured={env.webhook_token_configured} label="Webhook" />
+        <ProviderStatusPill configured={env.asaas_api_key_configured} label="Asaas API" suffix={env.asaas_api_key_last4} />
+        <ProviderStatusPill configured={env.asaas_webhook_token_configured} label="Asaas webhook" />
+        <ProviderStatusPill configured={env.stripe_publishable_key_configured} label="Stripe pk" suffix={env.stripe_publishable_key_last4} />
+        <ProviderStatusPill configured={env.stripe_secret_key_configured} label="Stripe sk" suffix={env.stripe_secret_key_last4} />
+        <ProviderStatusPill configured={env.stripe_webhook_secret_configured} label="Stripe webhook" suffix={env.stripe_webhook_secret_last4} />
       </div>
       <div className="provider-card-foot">
         <span>{env.updated_at ? formatDateTime(new Date(env.updated_at)) : 'Nunca atualizado'}</span>
+        <span>{env.pending_transactions} pendente(s) · {env.expired_pix_transactions} PIX expirado(s) · {env.failed_transactions} falha(s)</span>
       </div>
       {canEdit ? <ProviderCredentialEditor environment={env.environment} /> : null}
     </article>
