@@ -30,7 +30,7 @@ import {
   WalletCards,
   X,
 } from 'lucide-react';
-import { type CSSProperties, FormEvent, type ReactNode, useMemo, useState } from 'react';
+import { type CSSProperties, FormEvent, type ReactNode, useCallback, useMemo, useState } from 'react';
 import { useAuth } from './contexts/useAuth';
 import type { WeeklyActivity, WeeklyFinance } from './lib/dashboard';
 import { formatCurrency, formatCurrencyExact, formatDateTime, formatNumber } from './lib/format';
@@ -59,6 +59,7 @@ import {
   type OfferingTypeBilling,
 } from './lib/offeringTypes';
 import type { OfferingCatalogFilters, OfferingCatalogItem, OfferingCatalogSource, OfferingCatalogStatus } from './lib/offeringCatalog';
+import { MfaGate } from './components/MfaGate';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -136,8 +137,6 @@ function AppLogo({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 function LoginPage() {
-  const { user, signOut } = useAuth();
-  const { data: isStaff, isLoading: checkingStaff } = usePlatformStaff();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -160,22 +159,6 @@ function LoginPage() {
       setSubmitting(false);
     }
   };
-
-  if (user && !checkingStaff && !isStaff) {
-    return (
-      <main className="login-shell">
-        <section className="access-panel" aria-live="polite">
-          <div className="status-icon danger"><Shield size={24} /></div>
-          <h1>Acesso restrito</h1>
-          <p>A conta {user.email} não possui permissão de equipe para acessar o backoffice.</p>
-          <button className="button secondary" type="button" onClick={signOut}>
-            <LogOut size={16} />
-            Sair e usar outra conta
-          </button>
-        </section>
-      </main>
-    );
-  }
 
   return (
     <main className="login-shell">
@@ -2292,11 +2275,35 @@ function LoadingScreen() {
 }
 
 export function App() {
-  const { user, isLoading } = useAuth();
-  const { data: isStaff, isLoading: staffLoading } = usePlatformStaff();
+  const { user, isLoading, signOut } = useAuth();
+  const [mfaVerifiedUserId, setMfaVerifiedUserId] = useState<string | null>(null);
+  const mfaVerified = Boolean(user && mfaVerifiedUserId === user.id);
+  const markMfaVerified = useCallback(() => {
+    if (user) setMfaVerifiedUserId(user.id);
+  }, [user]);
+  const { data: isStaff, isLoading: staffLoading } = usePlatformStaff(mfaVerified);
 
-  if (isLoading || (user && staffLoading)) return <LoadingScreen />;
-  if (!user || !isStaff) return <LoginPage />;
+  if (isLoading) return <LoadingScreen />;
+  if (!user) return <LoginPage />;
+  if (!mfaVerified) {
+    return <MfaGate key={user.id} onVerified={markMfaVerified} onSignOut={signOut} />;
+  }
+  if (staffLoading) return <LoadingScreen />;
+  if (!isStaff) {
+    return (
+      <main className="login-shell">
+        <section className="access-panel" aria-live="polite">
+          <div className="status-icon danger"><Shield size={24} /></div>
+          <h1>Acesso restrito</h1>
+          <p>A conta {user.email} não possui permissão de equipe para acessar o backoffice.</p>
+          <button className="button secondary" type="button" onClick={() => void signOut()}>
+            <LogOut size={16} />
+            Sair e usar outra conta
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <>

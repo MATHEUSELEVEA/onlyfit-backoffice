@@ -5,6 +5,7 @@
 Esta é a primeira instrução operacional para qualquer agente. Quando o usuário pedir `push`, PR, merge ou deploy, é proibido encerrar com mudanças ou commits apenas locais. O agente deve partir da `main` atualizada, criar branch, fazer commit, enviar a branch ao remoto, abrir Pull Request para `main`, fazer merge do PR e confirmar que a `main` remota contém a entrega. Nunca faça commit ou push direto na `main`.
 
 Leia primeiro `../CLAUDE.md` e depois `CLAUDE.md` deste repositório.
+Leia também [`SECURITY-SCALABILITY.md`](SECURITY-SCALABILITY.md) antes de qualquer mudança.
 
 Este app é o portal web interno da equipe de gestão OnlyFit. Ele consome o mesmo Supabase de produção via chave `anon` e respeita RLS/RPCs de staff. Nunca coloque `service_role` ou segredo no cliente.
 
