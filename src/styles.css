@@ -150,6 +150,40 @@ select:focus-visible {
   transform: rotate(180deg);
 }
 
+.mfa-panel {
+  max-width: 460px;
+}
+
+.mfa-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.mfa-enrollment {
+  display: grid;
+  gap: 12px;
+}
+
+.mfa-enrollment img {
+  width: min(240px, 100%);
+  margin-inline: auto;
+  border-radius: 12px;
+  background: white;
+  padding: 10px;
+}
+
+.mfa-enrollment code {
+  display: block;
+  overflow-wrap: anywhere;
+  margin-top: 8px;
+  border-radius: 8px;
+  background: rgb(var(--color-surface-container));
+  padding: 10px;
+  user-select: all;
+}
+
 .nav-list {
   display: flex;
   flex: 1;
