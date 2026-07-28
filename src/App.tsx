@@ -27,6 +27,7 @@ import {
   Sparkles,
   UserPlus,
   Users,
+  UsersRound,
   WalletCards,
   X,
 } from 'lucide-react';
@@ -60,9 +61,11 @@ import {
 } from './lib/offeringTypes';
 import type { OfferingCatalogFilters, OfferingCatalogItem, OfferingCatalogSource, OfferingCatalogStatus } from './lib/offeringCatalog';
 import { MfaGate } from './components/MfaGate';
+import { UsersDirectoryPage } from './components/UsersDirectory';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'members', label: 'Usuários', icon: UsersRound },
   { id: 'feed', label: 'Feed', icon: Rss },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
@@ -72,7 +75,7 @@ const navItems = [
   { label: 'Alertas', icon: Bell, disabled: true },
 ] as const;
 
-type SectionId = 'dashboard' | 'feed' | 'offering-types' | 'offerings' | 'finance' | 'users';
+type SectionId = 'dashboard' | 'members' | 'feed' | 'offering-types' | 'offerings' | 'finance' | 'users';
 
 const billingTypeOptions: ReadonlyArray<{ value: BillingType; label: string }> = [
   { value: 'one_time', label: 'Pagamento único' },
@@ -2253,6 +2256,7 @@ function AppShell() {
           <AppLogo />
         </header>
         {activeSection === 'dashboard' && <Dashboard />}
+        {activeSection === 'members' && <UsersDirectoryPage />}
         {activeSection === 'feed' && <FeedAlgorithmPage />}
         {activeSection === 'offering-types' && <OfferingTypesPage />}
         {activeSection === 'offerings' && <OfferingCatalogPage />}
