@@ -3032,3 +3032,178 @@ svg text {
     transition-duration: 1ms !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Invite Only
+   A chave é a informação mais importante da tela: ganha um cartão próprio, com
+   a borda acesa quando o acesso por convite está ligado.
+   --------------------------------------------------------------------------- */
+
+.invite-page {
+  gap: 16px;
+}
+
+.invite-page .header-actions input,
+.invite-page .header-actions select {
+  min-height: 40px;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  color: rgb(var(--color-on-surface));
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.invite-page .header-actions input::placeholder {
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.invite-switch-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 12px;
+  background: rgb(var(--color-surface-container));
+  padding: 22px;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.invite-switch-card.is-on {
+  border-color: rgb(var(--color-primary) / 0.55);
+  background: linear-gradient(
+    120deg,
+    rgb(var(--color-primary) / 0.08),
+    rgb(var(--color-surface-container)) 55%
+  );
+}
+
+.invite-switch-copy {
+  display: flex;
+  min-width: 260px;
+  flex: 1 1 320px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.invite-switch-copy h2 {
+  color: rgb(var(--color-on-surface));
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.invite-switch-copy p {
+  max-width: 62ch;
+  color: rgb(var(--color-on-surface-variant));
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.invite-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.invite-switch.checked {
+  color: rgb(var(--color-primary));
+}
+
+.invite-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.invite-switch-track {
+  display: inline-flex;
+  width: 58px;
+  height: 32px;
+  align-items: center;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 999px;
+  background: rgb(var(--color-surface-container-highest));
+  padding: 3px;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.invite-switch.checked .invite-switch-track {
+  border-color: rgb(var(--color-primary));
+  background: rgb(var(--color-primary));
+}
+
+.invite-switch-thumb {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgb(var(--color-on-surface-variant));
+  color: rgb(var(--color-surface-container));
+  transform: translateX(0);
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.invite-switch.checked .invite-switch-thumb {
+  background: rgb(var(--color-on-primary));
+  color: rgb(var(--color-primary));
+  transform: translateX(26px);
+}
+
+.invite-switch:has(input:focus-visible) .invite-switch-track {
+  outline: 2px solid rgb(var(--color-primary));
+  outline-offset: 2px;
+}
+
+.invite-switch:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.invite-add-form {
+  display: grid;
+  align-items: end;
+  gap: 14px;
+  grid-template-columns: minmax(260px, 2fr) minmax(200px, 1fr) auto;
+}
+
+.invite-add-form .button {
+  min-height: 44px;
+}
+
+.invite-pagination {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  color: rgb(var(--color-on-surface-variant));
+  margin-top: 14px;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .invite-add-form {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-switch-card {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invite-switch-card,
+  .invite-switch-track,
+  .invite-switch-thumb {
+    transition: none;
+  }
+}

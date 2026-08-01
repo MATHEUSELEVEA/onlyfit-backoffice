@@ -25,6 +25,7 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   Sparkles,
+  Ticket,
   UserPlus,
   Users,
   UsersRound,
@@ -62,6 +63,7 @@ import {
 import type { OfferingCatalogFilters, OfferingCatalogItem, OfferingCatalogSource, OfferingCatalogStatus } from './lib/offeringCatalog';
 import { MfaGate } from './components/MfaGate';
 import { UsersDirectoryPage } from './components/UsersDirectory';
+import { InviteOnlyPage } from './components/InviteOnly';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -70,12 +72,21 @@ const navItems = [
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
+  { id: 'invite-only', label: 'Invite Only', icon: Ticket },
   { id: 'users', label: 'Equipe', icon: Users },
   { label: 'Moderação', icon: Shield, disabled: true },
   { label: 'Alertas', icon: Bell, disabled: true },
 ] as const;
 
-type SectionId = 'dashboard' | 'members' | 'feed' | 'offering-types' | 'offerings' | 'finance' | 'users';
+type SectionId =
+  | 'dashboard'
+  | 'members'
+  | 'feed'
+  | 'offering-types'
+  | 'offerings'
+  | 'finance'
+  | 'invite-only'
+  | 'users';
 
 const billingTypeOptions: ReadonlyArray<{ value: BillingType; label: string }> = [
   { value: 'one_time', label: 'Pagamento único' },
@@ -2261,6 +2272,7 @@ function AppShell() {
         {activeSection === 'offering-types' && <OfferingTypesPage />}
         {activeSection === 'offerings' && <OfferingCatalogPage />}
         {activeSection === 'finance' && <FinancePage />}
+        {activeSection === 'invite-only' && <InviteOnlyPage />}
         {activeSection === 'users' && <UsersPage />}
       </div>
     </div>
