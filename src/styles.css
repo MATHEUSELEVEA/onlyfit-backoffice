@@ -231,6 +231,31 @@ select:focus-visible {
   padding: 0;
 }
 
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-sublist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 20px;
+  padding-left: 10px;
+  border-left: 1px solid rgb(var(--color-outline-variant));
+}
+
+.nav-subitem {
+  min-height: 38px;
+}
+
+.collapsed .nav-sublist {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
+}
+
 .sidebar-footer {
   border-top: 1px solid rgb(var(--color-outline-variant));
 }

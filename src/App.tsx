@@ -67,12 +67,16 @@ import { InviteOnlyPage } from './components/InviteOnly';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'members', label: 'Usuários', icon: UsersRound },
+  {
+    id: 'members',
+    label: 'Usuários',
+    icon: UsersRound,
+    children: [{ id: 'invite-only', label: 'Invite Only', icon: Ticket }],
+  },
   { id: 'feed', label: 'Feed', icon: Rss },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
-  { id: 'invite-only', label: 'Invite Only', icon: Ticket },
   { id: 'users', label: 'Equipe', icon: Users },
   { label: 'Moderação', icon: Shield, disabled: true },
   { label: 'Alertas', icon: Bell, disabled: true },
@@ -254,21 +258,44 @@ function Sidebar({
             const itemId = 'id' in item ? item.id : null;
             const isActive = itemId === activeSection;
             const isDisabled = 'disabled' in item && item.disabled === true;
+            const children = 'children' in item ? item.children : null;
+            const hasActiveChild = children?.some((child) => child.id === activeSection) ?? false;
             return (
-              <button
-                key={item.label}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-                type="button"
-                disabled={isDisabled}
-                onClick={() => {
-                  if (itemId) onNavigate(itemId);
-                }}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon size={18} />
-                {!collapsed && <span>{item.label}</span>}
-                {!collapsed && isDisabled && <small>em breve</small>}
-              </button>
+              <div key={item.label} className="nav-group">
+                <button
+                  className={`nav-item ${isActive ? 'active' : ''}`}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => {
+                    if (itemId) onNavigate(itemId);
+                  }}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <Icon size={18} />
+                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && isDisabled && <small>em breve</small>}
+                </button>
+                {children && (!collapsed || hasActiveChild) && (
+                  <div className="nav-sublist">
+                    {children.map((child) => {
+                      const ChildIcon = child.icon;
+                      const isChildActive = child.id === activeSection;
+                      return (
+                        <button
+                          key={child.id}
+                          className={`nav-item nav-subitem ${isChildActive ? 'active' : ''}`}
+                          type="button"
+                          onClick={() => onNavigate(child.id)}
+                          title={collapsed ? child.label : undefined}
+                        >
+                          <ChildIcon size={16} />
+                          {!collapsed && <span>{child.label}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
