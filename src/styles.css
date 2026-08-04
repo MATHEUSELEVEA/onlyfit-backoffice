@@ -2783,7 +2783,8 @@ svg text {
   color: rgb(var(--color-on-surface));
 }
 
-.user-dialog-field input {
+.user-dialog-field input,
+.user-dialog-field select {
   min-height: 44px;
   border: 1px solid rgb(var(--color-outline-variant));
   border-radius: 10px;
