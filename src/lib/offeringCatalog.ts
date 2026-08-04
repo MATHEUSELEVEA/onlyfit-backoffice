@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 
 export type OfferingCatalogSource = 'business_offering' | 'market_product';
 export type OfferingCatalogStatus = 'draft' | 'active' | 'paused' | 'archived';
+export type AppStoreProductStatus = 'pending' | 'ready' | 'retired';
+export type AppStoreProductType = 'auto_renewable_subscription' | 'non_consumable';
 
 export type OfferingCatalogItem = {
   source: OfferingCatalogSource;
@@ -20,6 +22,10 @@ export type OfferingCatalogItem = {
   ios_fee_percent_snapshot: number | null;
   ios_fee_fixed_snapshot: number | null;
   ios_pricing_version: number | null;
+  app_store_product_id: string | null;
+  app_store_product_type: AppStoreProductType | null;
+  app_store_product_status: AppStoreProductStatus | null;
+  app_store_subscription_group: string | null;
   currency: string;
   fee_percent_snapshot: number | null;
   fee_fixed_snapshot: number | null;
@@ -125,6 +131,10 @@ function parseCatalogItem(value: unknown): OfferingCatalogItem {
     ios_fee_percent_snapshot: numberOrNull(row.ios_fee_percent_snapshot),
     ios_fee_fixed_snapshot: numberOrNull(row.ios_fee_fixed_snapshot),
     ios_pricing_version: numberOrNull(row.ios_pricing_version),
+    app_store_product_id: null,
+    app_store_product_type: null,
+    app_store_product_status: null,
+    app_store_subscription_group: null,
     currency: String(row.currency ?? 'BRL'),
     fee_percent_snapshot: numberOrNull(row.fee_percent_snapshot),
     fee_fixed_snapshot: numberOrNull(row.fee_fixed_snapshot),
@@ -168,13 +178,17 @@ export async function listOfferingCatalog(filters: OfferingCatalogFilters): Prom
     .map((item) => item.business_offering_id)
     .filter((id): id is string => Boolean(id));
   let channelPrices: Record<string, unknown> = {};
+  let appStoreProducts: Record<string, unknown> = {};
   if (offeringIds.length > 0) {
-    const { data: priceData, error: priceError } = await supabase.rpc(
-      'control_get_business_offering_channel_prices',
-      { p_offering_ids: offeringIds },
-    );
+    const [pricesResult, productsResult] = await Promise.all([
+      supabase.rpc('control_get_business_offering_channel_prices', { p_offering_ids: offeringIds }),
+      supabase.rpc('control_get_app_store_products', { p_offering_ids: offeringIds }),
+    ]);
+    const { data: priceData, error: priceError } = pricesResult;
     if (priceError) throw priceError;
+    if (productsResult.error) throw productsResult.error;
     channelPrices = asRecord(priceData);
+    appStoreProducts = asRecord(productsResult.data);
   }
 
   return {
@@ -183,15 +197,49 @@ export async function listOfferingCatalog(filters: OfferingCatalogFilters): Prom
     offset: numberFrom(row.offset),
     items: items.map((item) => {
       const price = asRecord(item.business_offering_id ? channelPrices[item.business_offering_id] : null);
+      const product = asRecord(item.business_offering_id ? appStoreProducts[item.business_offering_id] : null);
+      const productType = stringOrNull(product.product_type);
+      const productStatus = stringOrNull(product.status);
       return {
         ...item,
         ios_price: numberOrNull(price.ios_price),
         ios_fee_percent_snapshot: numberOrNull(price.ios_fee_percent_snapshot),
         ios_fee_fixed_snapshot: numberOrNull(price.ios_fee_fixed_snapshot),
         ios_pricing_version: numberOrNull(price.ios_pricing_version),
+        app_store_product_id: stringOrNull(product.product_id),
+        app_store_product_type: productType === 'auto_renewable_subscription' || productType === 'non_consumable'
+          ? productType
+          : null,
+        app_store_product_status: productStatus === 'pending' || productStatus === 'ready' || productStatus === 'retired'
+          ? productStatus
+          : null,
+        app_store_subscription_group: stringOrNull(product.subscription_group_reference),
       };
     }),
   };
+}
+
+export type AppStoreProductInput = {
+  offeringId: string;
+  productId: string;
+  productType: AppStoreProductType;
+  status: AppStoreProductStatus;
+  appStorePrice: number | null;
+  currency: string;
+  subscriptionGroupReference: string | null;
+};
+
+export async function upsertAppStoreProduct(input: AppStoreProductInput): Promise<void> {
+  const { error } = await supabase.rpc('control_upsert_app_store_product', {
+    p_offering_id: input.offeringId,
+    p_product_id: input.productId,
+    p_product_type: input.productType,
+    p_status: input.status,
+    p_app_store_price: input.appStorePrice,
+    p_currency: input.currency,
+    p_subscription_group_reference: input.subscriptionGroupReference,
+  });
+  if (error) throw error;
 }
 
 export async function syncProductOffering(productId: string): Promise<string | null> {

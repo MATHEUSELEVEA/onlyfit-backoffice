@@ -64,6 +64,7 @@ import type { OfferingCatalogFilters, OfferingCatalogItem, OfferingCatalogSource
 import { MfaGate } from './components/MfaGate';
 import { UsersDirectoryPage } from './components/UsersDirectory';
 import { InviteOnlyPage } from './components/InviteOnly';
+import { AppStoreProductDialog } from './components/AppStoreProductDialog';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -1377,6 +1378,7 @@ function OfferingCatalogPage() {
   const [offeringType, setOfferingType] = useState('');
   const [status, setStatus] = useState<OfferingCatalogStatus | ''>('');
   const [page, setPage] = useState(0);
+  const [appleItem, setAppleItem] = useState<OfferingCatalogItem | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const syncMutation = useSyncProductOffering();
   const pageSize = 50;
@@ -1552,19 +1554,35 @@ function OfferingCatalogPage() {
                           <span>{financialStatusLabel(item.financial_status)}</span>
                         </td>
                         <td>
-                          {item.source === 'market_product' && item.product_id ? (
-                            <button
-                              className="button secondary compact"
-                              type="button"
-                              disabled={!canEdit || syncMutation.isPending}
-                              onClick={() => syncProduct(item)}
-                            >
-                              <Shuffle size={14} />
-                              Sincronizar
-                            </button>
-                          ) : item.business_offering_id ? (
-                            <span>{item.business_offering_id.slice(0, 8)}</span>
-                          ) : '—'}
+                          <div className="header-actions">
+                            {item.source === 'market_product' && item.product_id ? (
+                              <button
+                                className="button secondary compact"
+                                type="button"
+                                disabled={!canEdit || syncMutation.isPending}
+                                onClick={() => syncProduct(item)}
+                              >
+                                <Shuffle size={14} />
+                                Sincronizar
+                              </button>
+                            ) : null}
+                            {item.business_offering_id
+                              && item.billing_type !== 'free'
+                              && ['premium_content', 'standalone_workout', 'standalone_diet', 'courses'].includes(item.offering_type ?? '') ? (
+                                <button
+                                  className="button secondary compact"
+                                  type="button"
+                                  disabled={!canEdit}
+                                  onClick={() => setAppleItem(item)}
+                                >
+                                  Apple {item.app_store_product_status === 'ready' ? '✓' : ''}
+                                </button>
+                              ) : null}
+                            {item.source !== 'market_product' && item.business_offering_id
+                              && !['premium_content', 'standalone_workout', 'standalone_diet', 'courses'].includes(item.offering_type ?? '')
+                              ? <span>{item.business_offering_id.slice(0, 8)}</span>
+                              : null}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1580,6 +1598,16 @@ function OfferingCatalogPage() {
           )}
         </section>
       </section>
+      {appleItem && (
+        <AppStoreProductDialog
+          item={appleItem}
+          onCancel={() => setAppleItem(null)}
+          onSaved={() => {
+            setAppleItem(null);
+            setMessage({ type: 'success', text: 'Produto Apple atualizado.' });
+          }}
+        />
+      )}
     </>
   );
 }
