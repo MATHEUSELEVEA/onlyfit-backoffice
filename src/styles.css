@@ -1133,6 +1133,34 @@ svg text {
   padding: 12px;
 }
 
+.finance-setting-card.ios-pricing-fieldset {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.ios-pricing-inputs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.finance-setting-card .setting-switch {
+  display: inline-flex;
+  width: fit-content;
+  grid-template-columns: none;
+}
+
+.finance-setting-card .setting-switch input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: rgb(var(--color-primary));
+}
+
+.ios-pricing-fieldset > small {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+}
+
 .finance-settings-grid .finance-save-button {
   justify-self: start;
 }
@@ -2797,6 +2825,10 @@ svg text {
 
   .finance-settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ios-pricing-inputs {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
   }
 
   .finance-settings-details summary {
