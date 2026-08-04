@@ -16,6 +16,10 @@ export type OfferingCatalogItem = {
   billing_type: 'one_time' | 'recurring' | 'free';
   billing_interval: string | null;
   price: number;
+  ios_price: number | null;
+  ios_fee_percent_snapshot: number | null;
+  ios_fee_fixed_snapshot: number | null;
+  ios_pricing_version: number | null;
   currency: string;
   fee_percent_snapshot: number | null;
   fee_fixed_snapshot: number | null;
@@ -117,6 +121,10 @@ function parseCatalogItem(value: unknown): OfferingCatalogItem {
     billing_type: row.billing_type === 'recurring' ? 'recurring' : row.billing_type === 'free' ? 'free' : 'one_time',
     billing_interval: stringOrNull(row.billing_interval),
     price: numberFrom(row.price),
+    ios_price: numberOrNull(row.ios_price),
+    ios_fee_percent_snapshot: numberOrNull(row.ios_fee_percent_snapshot),
+    ios_fee_fixed_snapshot: numberOrNull(row.ios_fee_fixed_snapshot),
+    ios_pricing_version: numberOrNull(row.ios_pricing_version),
     currency: String(row.currency ?? 'BRL'),
     fee_percent_snapshot: numberOrNull(row.fee_percent_snapshot),
     fee_fixed_snapshot: numberOrNull(row.fee_fixed_snapshot),
@@ -155,11 +163,34 @@ export async function listOfferingCatalog(filters: OfferingCatalogFilters): Prom
   if (error) throw error;
 
   const row = asRecord(data);
+  const items = Array.isArray(row.items) ? row.items.map(parseCatalogItem) : [];
+  const offeringIds = items
+    .map((item) => item.business_offering_id)
+    .filter((id): id is string => Boolean(id));
+  let channelPrices: Record<string, unknown> = {};
+  if (offeringIds.length > 0) {
+    const { data: priceData, error: priceError } = await supabase.rpc(
+      'control_get_business_offering_channel_prices',
+      { p_offering_ids: offeringIds },
+    );
+    if (priceError) throw priceError;
+    channelPrices = asRecord(priceData);
+  }
+
   return {
     total: numberFrom(row.total),
     limit: numberFrom(row.limit),
     offset: numberFrom(row.offset),
-    items: Array.isArray(row.items) ? row.items.map(parseCatalogItem) : [],
+    items: items.map((item) => {
+      const price = asRecord(item.business_offering_id ? channelPrices[item.business_offering_id] : null);
+      return {
+        ...item,
+        ios_price: numberOrNull(price.ios_price),
+        ios_fee_percent_snapshot: numberOrNull(price.ios_fee_percent_snapshot),
+        ios_fee_fixed_snapshot: numberOrNull(price.ios_fee_fixed_snapshot),
+        ios_pricing_version: numberOrNull(price.ios_pricing_version),
+      };
+    }),
   };
 }
 

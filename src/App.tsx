@@ -1037,6 +1037,19 @@ function parseIntInput(value: string): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function calculateChannelPrice(
+  basePrice: number,
+  commissionPercent: number,
+  processingPercent: number,
+  fixedFee: number,
+  roundingIncrement: number,
+): number {
+  const percent = commissionPercent + processingPercent;
+  if (basePrice <= 0 || percent < 0 || percent >= 100 || fixedFee < 0 || roundingIncrement <= 0) return 0;
+  const gross = (basePrice + fixedFee) / (1 - percent / 100);
+  return Math.round(Math.ceil((gross / roundingIncrement) - Number.EPSILON) * roundingIncrement * 100) / 100;
+}
+
 function PaymentSettingsForm({
   settings,
   canEdit,
@@ -1046,6 +1059,12 @@ function PaymentSettingsForm({
     payout_minimum_amount: number;
     card_settlement_days: number;
     settlement_weekdays: number[];
+    ios_iap_commission_percent: number;
+    ios_iap_processing_percent: number;
+    ios_iap_fixed_fee: number;
+    ios_iap_rounding_increment: number;
+    ios_iap_pricing_enabled: boolean;
+    ios_iap_pricing_version: number;
   };
   canEdit: boolean;
 }) {
@@ -1056,23 +1075,50 @@ function PaymentSettingsForm({
   const [weekdays, setWeekdays] = useState<number[]>(() =>
     settings.settlement_weekdays.length ? [...settings.settlement_weekdays].sort((a, b) => a - b) : [1, 2, 3, 4, 5],
   );
+  const [iosCommissionInput, setIosCommissionInput] = useState(() => formatPriceInput(settings.ios_iap_commission_percent));
+  const [iosProcessingInput, setIosProcessingInput] = useState(() => formatPriceInput(settings.ios_iap_processing_percent));
+  const [iosFixedInput, setIosFixedInput] = useState(() => formatPriceInput(settings.ios_iap_fixed_fee));
+  const [iosRoundingInput, setIosRoundingInput] = useState(() => formatPriceInput(settings.ios_iap_rounding_increment));
+  const [iosPricingEnabled, setIosPricingEnabled] = useState(settings.ios_iap_pricing_enabled);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const hours = parseIntInput(hoursInput);
   const minimum = parseCurrencyInput(minimumInput);
   const settlement = parseIntInput(settlementInput);
+  const iosCommission = parseCurrencyInput(iosCommissionInput);
+  const iosProcessing = parseCurrencyInput(iosProcessingInput);
+  const iosFixed = parseCurrencyInput(iosFixedInput);
+  const iosRounding = parseCurrencyInput(iosRoundingInput);
 
   const isHoursInvalid = hours === null;
   const isMinimumInvalid = minimum === null || minimum < 0;
   const isSettlementInvalid = settlement === null;
   const isWeekdaysInvalid = weekdays.length === 0;
-  const hasInvalid = isHoursInvalid || isMinimumInvalid || isSettlementInvalid || isWeekdaysInvalid;
+  const isIosPricingInvalid = iosCommission === null || iosCommission < 0
+    || iosProcessing === null || iosProcessing < 0
+    || iosCommission + iosProcessing >= 100
+    || iosFixed === null || iosFixed < 0
+    || iosRounding === null || iosRounding <= 0;
+  const hasInvalid = isHoursInvalid || isMinimumInvalid || isSettlementInvalid || isWeekdaysInvalid || isIosPricingInvalid;
 
   const dirty =
     (hours ?? -1) !== settings.payout_processing_hours ||
     Math.round((minimum ?? -1) * 100) !== Math.round(settings.payout_minimum_amount * 100) ||
     (settlement ?? -1) !== settings.card_settlement_days ||
-    weekdays.join(',') !== [...settings.settlement_weekdays].sort((a, b) => a - b).join(',');
+    weekdays.join(',') !== [...settings.settlement_weekdays].sort((a, b) => a - b).join(',') ||
+    Math.round((iosCommission ?? -1) * 100) !== Math.round(settings.ios_iap_commission_percent * 100) ||
+    Math.round((iosProcessing ?? -1) * 100) !== Math.round(settings.ios_iap_processing_percent * 100) ||
+    Math.round((iosFixed ?? -1) * 100) !== Math.round(settings.ios_iap_fixed_fee * 100) ||
+    Math.round((iosRounding ?? -1) * 100) !== Math.round(settings.ios_iap_rounding_increment * 100) ||
+    iosPricingEnabled !== settings.ios_iap_pricing_enabled;
+
+  const iosPreview = calculateChannelPrice(
+    35.9,
+    iosCommission ?? 0,
+    iosProcessing ?? 0,
+    iosFixed ?? 0,
+    iosRounding ?? 0,
+  );
 
   const toggleWeekday = (day: number) => {
     setWeekdays((current) =>
@@ -1085,7 +1131,8 @@ function PaymentSettingsForm({
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
-    if (hours === null || minimum === null || settlement === null || hasInvalid) {
+    if (hours === null || minimum === null || settlement === null || iosCommission === null
+      || iosProcessing === null || iosFixed === null || iosRounding === null || hasInvalid) {
       setMessage({ type: 'error', text: 'Confira os valores e selecione pelo menos um dia de liquidação.' });
       return;
     }
@@ -1095,6 +1142,11 @@ function PaymentSettingsForm({
         payoutMinimumAmount: minimum,
         cardSettlementDays: settlement,
         settlementWeekdays: weekdays,
+        iosIapCommissionPercent: iosCommission,
+        iosIapProcessingPercent: iosProcessing,
+        iosIapFixedFee: iosFixed,
+        iosIapRoundingIncrement: iosRounding,
+        iosIapPricingEnabled: iosPricingEnabled,
       },
       {
         onSuccess: () => setMessage({ type: 'success', text: 'Parâmetros de pagamento atualizados.' }),
@@ -1120,6 +1172,7 @@ function PaymentSettingsForm({
             <span><b>{formatCurrencyExact(settings.payout_minimum_amount)}</b> mínimo</span>
             <span><b>{settings.card_settlement_days}d</b> cartão</span>
             <span><b>{weekdays.length}</b> dias</span>
+            <span><b>{formatPriceInput(settings.ios_iap_commission_percent + settings.ios_iap_processing_percent)}%</b> iOS</span>
           </div>
           {canEdit ? <i>Editar</i> : null}
         </summary>
@@ -1184,6 +1237,62 @@ function PaymentSettingsForm({
               })}
             </div>
             {isWeekdaysInvalid && <small className="form-error">Selecione um dia.</small>}
+          </fieldset>
+          <fieldset className="finance-setting-card ios-pricing-fieldset">
+            <legend>Preço no app</legend>
+            <label className="setting-switch">
+              <input
+                type="checkbox"
+                checked={iosPricingEnabled}
+                disabled={!canEdit}
+                onChange={(event) => setIosPricingEnabled(event.target.checked)}
+              />
+              <span>Ativo</span>
+            </label>
+            <div className="ios-pricing-inputs">
+              <label>
+                <small>Comissão %</small>
+                <input
+                  value={iosCommissionInput}
+                  disabled={!canEdit}
+                  inputMode="decimal"
+                  aria-invalid={isIosPricingInvalid}
+                  onChange={(event) => setIosCommissionInput(event.target.value.replace(/[^\d.,]/g, ''))}
+                />
+              </label>
+              <label>
+                <small>Processamento %</small>
+                <input
+                  value={iosProcessingInput}
+                  disabled={!canEdit}
+                  inputMode="decimal"
+                  aria-invalid={isIosPricingInvalid}
+                  onChange={(event) => setIosProcessingInput(event.target.value.replace(/[^\d.,]/g, ''))}
+                />
+              </label>
+              <label>
+                <small>Taxa fixa</small>
+                <input
+                  value={iosFixedInput}
+                  disabled={!canEdit}
+                  inputMode="decimal"
+                  aria-invalid={isIosPricingInvalid}
+                  onChange={(event) => setIosFixedInput(event.target.value.replace(/[^\d.,]/g, ''))}
+                />
+              </label>
+              <label>
+                <small>Arredondamento</small>
+                <input
+                  value={iosRoundingInput}
+                  disabled={!canEdit}
+                  inputMode="decimal"
+                  aria-invalid={isIosPricingInvalid}
+                  onChange={(event) => setIosRoundingInput(event.target.value.replace(/[^\d.,]/g, ''))}
+                />
+              </label>
+            </div>
+            <strong>{formatCurrencyExact(35.9)} → {formatCurrencyExact(iosPreview)}</strong>
+            <small>Regra v{settings.ios_iap_pricing_version}</small>
           </fieldset>
           {canEdit ? (
             <button className="button primary finance-save-button" type="submit" disabled={!dirty || hasInvalid || updateMutation.isPending}>
@@ -1407,7 +1516,8 @@ function OfferingCatalogPage() {
                       <th>Oferta</th>
                       <th>Origem</th>
                       <th>Negócio</th>
-                      <th>Preço</th>
+                      <th>Preço base</th>
+                      <th>No app</th>
                       <th>Regra</th>
                       <th>Vendas</th>
                       <th>Comissão</th>
@@ -1426,6 +1536,10 @@ function OfferingCatalogPage() {
                         <td>{sourceLabel(item.source)}</td>
                         <td>{item.organization_name ?? item.organization_slug ?? '—'}</td>
                         <td>{item.billing_type === 'free' ? 'Grátis' : formatCurrencyExact(item.price)}</td>
+                        <td>
+                          <strong>{item.ios_price == null ? '—' : formatCurrencyExact(item.ios_price)}</strong>
+                          {item.ios_pricing_version != null ? <span>regra v{item.ios_pricing_version}</span> : null}
+                        </td>
                         <td>{feeRuleText(item)}</td>
                         <td>{formatNumber(item.transactions_count)} · {formatCurrencyExact(item.gross_revenue)}</td>
                         <td>{formatCurrencyExact(item.platform_commission)}</td>

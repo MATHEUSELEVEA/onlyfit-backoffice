@@ -19,6 +19,11 @@ export function useUpdatePlatformPaymentSettings() {
       payoutMinimumAmount: number;
       cardSettlementDays: number;
       settlementWeekdays: number[];
+      iosIapCommissionPercent: number;
+      iosIapProcessingPercent: number;
+      iosIapFixedFee: number;
+      iosIapRoundingIncrement: number;
+      iosIapPricingEnabled: boolean;
     }) => updatePlatformPaymentSettings(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['platform-payment-settings'] });
