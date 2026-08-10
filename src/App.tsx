@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageCircle,
+  MessageSquareWarning,
   Menu,
   Moon,
   Pencil,
@@ -65,6 +66,7 @@ import { MfaGate } from './components/MfaGate';
 import { UsersDirectoryPage } from './components/UsersDirectory';
 import { InviteOnlyPage } from './components/InviteOnly';
 import { AppStoreProductDialog } from './components/AppStoreProductDialog';
+import { BetaFeedbackPage } from './components/BetaFeedback';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -78,6 +80,7 @@ const navItems = [
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
+  { id: 'beta-feedback', label: 'Feedback Beta', icon: MessageSquareWarning },
   { id: 'users', label: 'Equipe', icon: Users },
   { label: 'Moderação', icon: Shield, disabled: true },
   { label: 'Alertas', icon: Bell, disabled: true },
@@ -90,6 +93,7 @@ type SectionId =
   | 'offering-types'
   | 'offerings'
   | 'finance'
+  | 'beta-feedback'
   | 'invite-only'
   | 'users';
 
@@ -2441,6 +2445,7 @@ function AppShell() {
         {activeSection === 'offering-types' && <OfferingTypesPage />}
         {activeSection === 'offerings' && <OfferingCatalogPage />}
         {activeSection === 'finance' && <FinancePage />}
+        {activeSection === 'beta-feedback' && <BetaFeedbackPage />}
         {activeSection === 'invite-only' && <InviteOnlyPage />}
         {activeSection === 'users' && <UsersPage />}
       </div>
