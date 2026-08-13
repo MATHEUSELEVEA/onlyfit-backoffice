@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageCircle,
+  Mail,
   MessageSquareWarning,
   Menu,
   Moon,
@@ -67,6 +68,7 @@ import { UsersDirectoryPage } from './components/UsersDirectory';
 import { InviteOnlyPage } from './components/InviteOnly';
 import { AppStoreProductDialog } from './components/AppStoreProductDialog';
 import { BetaFeedbackPage } from './components/BetaFeedback';
+import { EmailCenterPage } from './components/EmailCenter';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -81,6 +83,7 @@ const navItems = [
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
   { id: 'beta-feedback', label: 'Feedback Beta', icon: MessageSquareWarning },
+  { id: 'email-center', label: 'E-mails', icon: Mail },
   { id: 'users', label: 'Equipe', icon: Users },
   { label: 'Moderação', icon: Shield, disabled: true },
   { label: 'Alertas', icon: Bell, disabled: true },
@@ -94,6 +97,7 @@ type SectionId =
   | 'offerings'
   | 'finance'
   | 'beta-feedback'
+  | 'email-center'
   | 'invite-only'
   | 'users';
 
@@ -2446,6 +2450,7 @@ function AppShell() {
         {activeSection === 'offerings' && <OfferingCatalogPage />}
         {activeSection === 'finance' && <FinancePage />}
         {activeSection === 'beta-feedback' && <BetaFeedbackPage />}
+        {activeSection === 'email-center' && <EmailCenterPage />}
         {activeSection === 'invite-only' && <InviteOnlyPage />}
         {activeSection === 'users' && <UsersPage />}
       </div>
