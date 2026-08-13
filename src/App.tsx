@@ -14,6 +14,7 @@ import {
   LogOut,
   MessageCircle,
   Mail,
+  MessageSquareOff,
   MessageSquareWarning,
   Menu,
   Moon,
@@ -65,6 +66,7 @@ import {
 import type { OfferingCatalogFilters, OfferingCatalogItem, OfferingCatalogSource, OfferingCatalogStatus } from './lib/offeringCatalog';
 import { MfaGate } from './components/MfaGate';
 import { UsersDirectoryPage } from './components/UsersDirectory';
+import { FirstContactPage } from './components/FirstContact';
 import { InviteOnlyPage } from './components/InviteOnly';
 import { AppStoreProductDialog } from './components/AppStoreProductDialog';
 import { BetaFeedbackPage } from './components/BetaFeedback';
@@ -81,6 +83,7 @@ const navItems = [
   { id: 'feed', label: 'Feed', icon: Rss },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
+  { id: 'first-contact', label: 'Primeiro contato', icon: MessageSquareOff },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
   { id: 'beta-feedback', label: 'Feedback Beta', icon: MessageSquareWarning },
   { id: 'email-center', label: 'E-mails', icon: Mail },
@@ -99,6 +102,7 @@ type SectionId =
   | 'beta-feedback'
   | 'email-center'
   | 'invite-only'
+  | 'first-contact'
   | 'users';
 
 const billingTypeOptions: ReadonlyArray<{ value: BillingType; label: string }> = [
@@ -2452,6 +2456,7 @@ function AppShell() {
         {activeSection === 'beta-feedback' && <BetaFeedbackPage />}
         {activeSection === 'email-center' && <EmailCenterPage />}
         {activeSection === 'invite-only' && <InviteOnlyPage />}
+        {activeSection === 'first-contact' && <FirstContactPage />}
         {activeSection === 'users' && <UsersPage />}
       </div>
     </div>
