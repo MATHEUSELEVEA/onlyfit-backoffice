@@ -44,7 +44,7 @@ import { normalizeEmail } from './lib/auth';
 import { supabase } from './lib/supabase';
 import { useDashboardSnapshot } from './hooks/useDashboardSnapshot';
 import { useOfferingTypeBilling, useUpdateOfferingTypeBilling } from './hooks/useOfferingTypeBilling';
-import { useOfferingCatalog, useSyncProductOffering } from './hooks/useOfferingCatalog';
+import { useOfferingCatalog } from './hooks/useOfferingCatalog';
 import { usePlatformPaymentSettings, useUpdatePlatformPaymentSettings } from './hooks/usePlatformPaymentSettings';
 import { usePlatformStaff } from './hooks/usePlatformStaff';
 import { useFeedAlgorithmSettings, useUpdateFeedAlgorithmSettings } from './hooks/useFeedAlgorithm';
@@ -1326,12 +1326,6 @@ function PaymentSettingsForm({
   );
 }
 
-const offeringCatalogSourceOptions: ReadonlyArray<{ value: OfferingCatalogSource | ''; label: string }> = [
-  { value: '', label: 'Todas as origens' },
-  { value: 'business_offering', label: 'Contrato financeiro' },
-  { value: 'market_product', label: 'Produto Market legado' },
-];
-
 const offeringCatalogStatusOptions: ReadonlyArray<{ value: OfferingCatalogStatus | ''; label: string }> = [
   { value: '', label: 'Todos os status' },
   { value: 'active', label: 'Ativa' },
@@ -1370,7 +1364,7 @@ function financialStatusLabel(value: string): string {
 }
 
 function sourceLabel(source: OfferingCatalogSource): string {
-  return source === 'market_product' ? 'Market legado' : 'Contrato financeiro';
+  return source === 'business_offering' ? 'Contrato financeiro' : 'Oferta';
 }
 
 function feeRuleText(item: OfferingCatalogItem): string {
@@ -1386,23 +1380,21 @@ function OfferingCatalogPage() {
   const { data: currentRole } = useCurrentStaffRole();
   const canEdit = currentRole === 'super_admin' || currentRole === 'admin';
   const { data: offeringTypes = [] } = useOfferingTypeBilling(true);
-  const [source, setSource] = useState<OfferingCatalogSource | ''>('');
   const [offeringType, setOfferingType] = useState('');
   const [status, setStatus] = useState<OfferingCatalogStatus | ''>('');
   const [page, setPage] = useState(0);
   const [appleItem, setAppleItem] = useState<OfferingCatalogItem | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const syncMutation = useSyncProductOffering();
   const pageSize = 50;
   const filters = useMemo<OfferingCatalogFilters>(
     () => ({
-      source: source || null,
+      source: 'business_offering',
       offeringType: offeringType || null,
       status: status || null,
       limit: pageSize,
       offset: page * pageSize,
     }),
-    [source, offeringType, status, page],
+    [offeringType, status, page],
   );
   const query = useOfferingCatalog(filters, true);
   const items = query.data?.items ?? [];
@@ -1411,29 +1403,13 @@ function OfferingCatalogPage() {
   const readyCount = items.filter((item) => item.financial_status === 'ready').length;
   const attentionCount = items.length - readyCount;
 
-  async function syncProduct(item: OfferingCatalogItem) {
-    if (!item.product_id || !canEdit) return;
-    setMessage(null);
-    try {
-      const offeringId = await syncMutation.mutateAsync(item.product_id);
-      setMessage({
-        type: offeringId ? 'success' : 'error',
-        text: offeringId
-          ? 'Produto sincronizado com o contrato financeiro.'
-          : 'Produto ainda não pôde ser sincronizado. Confira tipo, preço e organização.',
-      });
-    } catch (error) {
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Não foi possível sincronizar.' });
-    }
-  }
-
   return (
     <>
       <header className="page-header">
         <div>
           <p className="section-label">Catálogo financeiro</p>
           <h1>Ofertas</h1>
-          <span>Assinaturas, consultorias, itens avulsos e produtos de Market com regra financeira, venda, take rate e liquidação.</span>
+          <span>Assinaturas, consultorias e itens avulsos com regra financeira, venda, take rate e liquidação.</span>
         </div>
         <div className="header-actions">
           <button className="button secondary" type="button" onClick={() => query.refetch()} disabled={query.isFetching}>
@@ -1471,16 +1447,9 @@ function OfferingCatalogPage() {
           <div className="section-heading">
             <div>
               <h2 id="offering-catalog-title">Catálogo auditável</h2>
-              <p>Itens que o frontend pode vender ou expor; produtos sem contrato ficam explícitos como pendência.</p>
+              <p>Ofertas que o frontend pode vender ou expor, com o contrato financeiro correspondente.</p>
             </div>
             <div className="header-actions">
-              <select
-                value={source}
-                onChange={(event) => { setSource(event.target.value as OfferingCatalogSource | ''); setPage(0); }}
-                aria-label="Filtrar por origem"
-              >
-                {offeringCatalogSourceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
               <select
                 value={offeringType}
                 onChange={(event) => { setOfferingType(event.target.value); setPage(0); }}
@@ -1567,17 +1536,6 @@ function OfferingCatalogPage() {
                         </td>
                         <td>
                           <div className="header-actions">
-                            {item.source === 'market_product' && item.product_id ? (
-                              <button
-                                className="button secondary compact"
-                                type="button"
-                                disabled={!canEdit || syncMutation.isPending}
-                                onClick={() => syncProduct(item)}
-                              >
-                                <Shuffle size={14} />
-                                Sincronizar
-                              </button>
-                            ) : null}
                             {item.business_offering_id
                               && item.billing_type !== 'free'
                               && ['premium_content', 'standalone_workout', 'standalone_diet', 'courses'].includes(item.offering_type ?? '') ? (
@@ -1590,7 +1548,7 @@ function OfferingCatalogPage() {
                                   Apple {item.app_store_product_status === 'ready' ? '✓' : ''}
                                 </button>
                               ) : null}
-                            {item.source !== 'market_product' && item.business_offering_id
+                            {item.business_offering_id
                               && !['premium_content', 'standalone_workout', 'standalone_diet', 'courses'].includes(item.offering_type ?? '')
                               ? <span>{item.business_offering_id.slice(0, 8)}</span>
                               : null}

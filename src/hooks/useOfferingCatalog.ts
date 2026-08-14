@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   listOfferingCatalog,
-  syncProductOffering,
   upsertAppStoreProduct,
   type AppStoreProductInput,
   type OfferingCatalogFilters,
@@ -23,19 +22,6 @@ export function useUpsertAppStoreProduct() {
     mutationFn: (input: AppStoreProductInput) => upsertAppStoreProduct(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['offering-catalog'] });
-    },
-  });
-}
-
-export function useSyncProductOffering() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: syncProductOffering,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['offering-catalog'] });
-      void queryClient.invalidateQueries({ queryKey: ['offering-type-billing'] });
-      void queryClient.invalidateQueries({ queryKey: ['financial-reports'] });
     },
   });
 }
