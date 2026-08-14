@@ -1,12 +1,16 @@
-import { AlertTriangle, Plus, RefreshCw, Save, ShoppingBag } from 'lucide-react';
+import { AlertTriangle, Megaphone, Plus, RefreshCw, Save, ShoppingBag } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import {
   useMarketAlgorithmSettings,
+  useAdBookings,
+  useAdInventory,
   useProductCategories,
   useSaveProductCategory,
   useSetMarketAlgorithmSettings,
+  useSetAdPackage,
+  useSetAdPlacement,
 } from '../hooks/useMarketSettings';
-import type { MarketAlgorithmInput, ProductCategory } from '../lib/marketSettings';
+import type { AdBooking, AdPackage, AdPlacement, MarketAlgorithmInput, ProductCategory } from '../lib/marketSettings';
 import { useCurrentStaffRole } from '../hooks/useStaffManagement';
 
 const defaults: MarketAlgorithmInput = {
@@ -43,6 +47,8 @@ export function MarketSettingsPage() {
   const canEdit = role === 'super_admin' || role === 'admin';
   const settings = useMarketAlgorithmSettings();
   const categories = useProductCategories();
+  const adInventory = useAdInventory();
+  const adBookings = useAdBookings();
   const setSettings = useSetMarketAlgorithmSettings();
   const saveCategory = useSaveProductCategory();
   const [form, setForm] = useState<MarketAlgorithmInput>(defaults);
@@ -101,7 +107,7 @@ export function MarketSettingsPage() {
         <span>Ranking do catálogo e categorias dos produtos físicos.</span>
       </div>
       <div className="header-actions">
-        <button className="button secondary" type="button" onClick={() => { void settings.refetch(); void categories.refetch(); }}>
+        <button className="button secondary" type="button" onClick={() => { void settings.refetch(); void categories.refetch(); void adInventory.refetch(); void adBookings.refetch(); }}>
           <RefreshCw size={16} /> Atualizar
         </button>
       </div>
@@ -112,6 +118,14 @@ export function MarketSettingsPage() {
         <AlertTriangle size={18} /> Não foi possível carregar a configuração do mercado.
       </div>}
       {message && <div className="inline-alert" role="status">{message}</div>}
+
+      <AdvertisingControl
+        inventory={adInventory.data ?? []}
+        bookings={adBookings.data?.items ?? []}
+        loading={adInventory.isLoading || adBookings.isLoading}
+        error={adInventory.isError || adBookings.isError}
+        canEdit={canEdit}
+      />
 
       <form className="feed-form" onSubmit={saveAlgorithm}>
         <section className="feed-command-panel">
@@ -158,6 +172,95 @@ export function MarketSettingsPage() {
     </section>
   </>;
 }
+
+function AdvertisingControl({ inventory, bookings, loading, error, canEdit }: {
+  inventory: AdPlacement[];
+  bookings: AdBooking[];
+  loading: boolean;
+  error: boolean;
+  canEdit: boolean;
+}) {
+  return <section className="feed-command-panel">
+    <div className="feed-command-head"><div><span>Publicidade</span><h2>Destaques pagos</h2></div><Megaphone size={20} /></div>
+    {error ? <div className="inline-alert danger" role="alert"><AlertTriangle size={18} /> Não foi possível carregar o inventário de anúncios.</div> : null}
+    {loading ? <p>Carregando inventário…</p> : (
+      <div className="feed-fields-grid">
+        {inventory.map((placement) => <AdPlacementEditor
+          key={`${placement.slug}-${placement.max_slots}-${placement.is_active}-${placement.packages.map((item) => `${item.id}:${item.price}:${item.is_active}`).join('|')}`}
+          placement={placement}
+          canEdit={canEdit}
+        />)}
+      </div>
+    )}
+
+    <div className="table-wrap">
+      <table>
+        <thead><tr><th>Oferta</th><th>Comprador</th><th>Posição</th><th>Período</th><th>Valor</th><th>Estado</th></tr></thead>
+        <tbody>{bookings.length ? bookings.map((booking) => <tr key={booking.id}>
+          <td>{booking.offering_name}</td>
+          <td>{booking.purchaser_name}</td>
+          <td>{placementName(booking.placement)}</td>
+          <td>{booking.duration_days} dias</td>
+          <td>{formatCurrency(booking.price_paid)}</td>
+          <td><span className="status-pill">{bookingStatus(booking.status)}</span></td>
+        </tr>) : <tr><td colSpan={6}>Nenhuma campanha contratada.</td></tr>}</tbody>
+      </table>
+    </div>
+  </section>;
+}
+
+function AdPlacementEditor({ placement, canEdit }: { placement: AdPlacement; canEdit: boolean }) {
+  const savePlacement = useSetAdPlacement();
+  const savePackage = useSetAdPackage();
+  const [maxSlots, setMaxSlots] = useState(placement.max_slots);
+  const [active, setActive] = useState(placement.is_active);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const savePlacementSettings = () => {
+    setMessage(null);
+    savePlacement.mutate({ slug: placement.slug, max_slots: maxSlots, is_active: active }, {
+      onSuccess: () => setMessage('Posição salva.'),
+      onError: () => setMessage('Não foi possível salvar a posição.'),
+    });
+  };
+
+  return <article className="feed-mode-option selected">
+    <div style={{ width: '100%' }}>
+      <strong>{placement.name}</strong>
+      <span>{placement.occupied_slots} ocupada(s) · {placement.reserved_slots} reservada(s) · {placement.max_slots} vaga(s)</span>
+      <div className="feed-fields-grid" style={{ marginTop: 12 }}>
+        <label className="feed-number-field"><span>Limite de vagas</span><input type="number" min={0} max={100} value={maxSlots} disabled={!canEdit} onChange={(event) => setMaxSlots(Number(event.target.value))} /></label>
+        <label><input type="checkbox" checked={active} disabled={!canEdit} onChange={(event) => setActive(event.target.checked)} /> {active ? 'Posição ativa' : 'Posição inativa'}</label>
+      </div>
+      {canEdit ? <button className="button secondary" type="button" disabled={savePlacement.isPending || maxSlots < 0 || maxSlots > 100} onClick={savePlacementSettings}><Save size={16} /> Salvar posição</button> : null}
+      <div className="table-wrap" style={{ marginTop: 12 }}><table><thead><tr><th>Duração</th><th>Preço</th><th>Disponível</th><th /></tr></thead><tbody>
+        {placement.packages.map((item) => <AdPackageRow key={`${item.id}-${item.price}-${item.is_active}`} item={item} canEdit={canEdit} saving={savePackage.isPending} onSave={(value) => savePackage.mutate(value, { onSuccess: () => setMessage('Pacote salvo.'), onError: () => setMessage('Informe um preço válido antes de ativar.') })} />)}
+      </tbody></table></div>
+      {message ? <span role="status">{message}</span> : null}
+    </div>
+  </article>;
+}
+
+function AdPackageRow({ item, canEdit, saving, onSave }: {
+  item: AdPackage;
+  canEdit: boolean;
+  saving: boolean;
+  onSave: (value: AdPackage) => void;
+}) {
+  const [price, setPrice] = useState(item.price == null ? '' : String(item.price));
+  const [active, setActive] = useState(item.is_active);
+  const numericPrice = Number(price.replace(',', '.'));
+  return <tr>
+    <td>{item.duration_days} dias</td>
+    <td><input className="of-field" inputMode="decimal" placeholder="0,00" value={price} disabled={!canEdit} onChange={(event) => setPrice(event.target.value.replace(/[^\d,.]/g, ''))} /></td>
+    <td><label><input type="checkbox" checked={active} disabled={!canEdit || !(numericPrice > 0)} onChange={(event) => setActive(event.target.checked)} /> {active ? 'Ativo' : 'Inativo'}</label></td>
+    <td>{canEdit ? <button className="icon-button" type="button" disabled={saving || !(numericPrice > 0)} onClick={() => onSave({ ...item, price: numericPrice, is_active: active })} aria-label={`Salvar pacote de ${item.duration_days} dias`}><Save size={16} /></button> : null}</td>
+  </tr>;
+}
+
+const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+const placementName = (value: string) => value === 'sponsor_carousel' ? 'Carrossel de patrocinadores' : 'Produtos em destaque';
+const bookingStatus = (value: string) => ({ pending: 'Pendente', active: 'Ativa', expired: 'Encerrada', failed: 'Falhou', refunded: 'Reembolsada' }[value] ?? value);
 
 function CategoryRow({ category, canEdit, onSave, saving }: { category: ProductCategory; canEdit: boolean; onSave: (value: ProductCategory) => void; saving: boolean }) {
   const [value, setValue] = useState(category);
