@@ -1,23 +1,18 @@
 import {
   AlertTriangle,
-  Apple,
   ArrowDown,
   ArrowUp,
   Check,
-  Dumbbell,
-  Footprints,
   GripVertical,
-  Medal,
   Pencil,
   Plus,
   RefreshCw,
   Save,
+  SearchX,
   Sparkles,
-  Swords,
   X,
-  type LucideIcon,
 } from 'lucide-react';
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useDeferredValue, useId, useMemo, useState } from 'react';
 import {
   useActivateAffinityGroup,
   useAffinityGroupAudit,
@@ -30,49 +25,27 @@ import {
 } from '../hooks/useAffinityGroups';
 import { useCurrentStaffRole } from '../hooks/useStaffManagement';
 import {
-  affinityAccents,
-  affinityGroupErrorMessage,
-  affinityIcons,
-  isAffinityGroupImpactChanged,
+  affinityAccentColor,
+  affinityAccentOptions,
+  affinityIconGroups,
+  matchesAffinityIconQuery,
   type AffinityAccent,
+  type AffinityIcon,
+} from '../lib/affinityCatalog';
+import {
+  affinityGroupErrorMessage,
+  isAffinityGroupImpactChanged,
   type AffinityGroup,
   type AffinityGroupInput,
-  type AffinityIcon,
   type AffinityImpact,
 } from '../lib/affinityGroups';
+import { affinityIconComponents, affinityIconLabel } from '../lib/affinityIconComponents';
 import { formatDateTime, formatNumber } from '../lib/format';
-
-const iconByName: Record<AffinityIcon, LucideIcon> = {
-  Dumbbell,
-  Sparkles,
-  Swords,
-  Footprints,
-  Medal,
-  Apple,
-};
-
-const iconLabel: Record<AffinityIcon, string> = {
-  Dumbbell: 'Halter',
-  Sparkles: 'Destaque',
-  Swords: 'Lutas',
-  Footprints: 'Passos',
-  Medal: 'Medalha',
-  Apple: 'Nutrição',
-};
-
-const accentOptions: Array<{ value: AffinityAccent; label: string; color: string }> = [
-  { value: 'from-amber-500/30', label: 'Âmbar', color: '#f59e0b' },
-  { value: 'from-rose-500/30', label: 'Rosa', color: '#f43f5e' },
-  { value: 'from-red-500/30', label: 'Vermelho', color: '#ef4444' },
-  { value: 'from-orange-500/30', label: 'Laranja', color: '#f97316' },
-  { value: 'from-violet-500/30', label: 'Violeta', color: '#8b5cf6' },
-  { value: 'from-lime-500/30', label: 'Lime', color: '#84cc16' },
-];
 
 const emptyForm: AffinityGroupInput = {
   label: '',
-  icon: affinityIcons[1],
-  accent: affinityAccents[5],
+  icon: 'Sparkles',
+  accent: 'from-lime-500/30',
   aliases: [],
 };
 
@@ -353,8 +326,8 @@ function AffinityGroupRow({
   onDragEnd: () => void;
   onDrop: () => void;
 }) {
-  const Icon = iconByName[group.icon];
-  const accent = accentOptions.find((option) => option.value === group.accent)?.color ?? '#84cc16';
+  const Icon = affinityIconComponents[group.icon] ?? Sparkles;
+  const accent = affinityAccentColor(group.accent);
   return (
     <article
       className={`affinity-row ${group.active ? '' : 'inactive'} ${dragged ? 'dragging' : ''}`}
@@ -411,23 +384,11 @@ function AffinityEditor({ editing, form, aliasesText, saving, onChange, onAliase
         <button className="icon-button" type="button" aria-label="Fechar editor" onClick={onCancel}><X size={18} /></button>
       </div>
       <form onSubmit={onSubmit}>
+        <AffinityIdentityPreview label={form.label} icon={form.icon} accent={form.accent} />
         <label className="affinity-field"><span>Nome</span><input required minLength={2} maxLength={60} value={form.label} onChange={(event) => onChange({ ...form, label: event.target.value })} /></label>
-        <fieldset className="affinity-choice-field">
-          <legend>Ícone</legend>
-          <div className="affinity-icon-options">
-            {affinityIcons.map((icon) => {
-              const Icon = iconByName[icon];
-              return <button key={icon} className={form.icon === icon ? 'selected' : ''} type="button" aria-label={iconLabel[icon]} aria-pressed={form.icon === icon} onClick={() => onChange({ ...form, icon })}><Icon size={19} /></button>;
-            })}
-          </div>
-        </fieldset>
-        <fieldset className="affinity-choice-field">
-          <legend>Cor</legend>
-          <div className="affinity-color-options">
-            {accentOptions.map((option) => <button key={option.value} className={form.accent === option.value ? 'selected' : ''} type="button" aria-label={option.label} aria-pressed={form.accent === option.value} style={{ '--swatch': option.color } as React.CSSProperties} onClick={() => onChange({ ...form, accent: option.value })}><span /></button>)}
-          </div>
-        </fieldset>
-        <label className="affinity-field"><span>Aliases, separados por vírgula</span><textarea rows={5} value={aliasesText} onChange={(event) => onAliasesChange(event.target.value)} /></label>
+        <AffinityIconPicker value={form.icon} onSelect={(icon) => onChange({ ...form, icon })} />
+        <AffinityAccentPicker value={form.accent} onSelect={(accent) => onChange({ ...form, accent })} />
+        <label className="affinity-field"><span>Aliases, separados por vírgula</span><textarea rows={4} value={aliasesText} onChange={(event) => onAliasesChange(event.target.value)} /></label>
         {editing !== 'new' && <p className="affinity-key-note">A chave técnica <code>{editing.key}</code> permanece inalterada.</p>}
         <div className="affinity-editor-actions">
           <button className="button secondary" type="button" onClick={onCancel} disabled={saving}>Cancelar</button>
@@ -435,6 +396,107 @@ function AffinityEditor({ editing, form, aliasesText, saving, onChange, onAliase
         </div>
       </form>
     </aside>
+  );
+}
+
+/** Mostra o grupo como ele vai aparecer na lista, com o ícone já pintado pela cor. */
+function AffinityIdentityPreview({ label, icon, accent }: { label: string; icon: AffinityIcon; accent: AffinityAccent }) {
+  const Icon = affinityIconComponents[icon] ?? Sparkles;
+  const trimmed = label.trim();
+  return (
+    <div className="affinity-identity-preview">
+      <span className="affinity-icon" style={{ '--affinity-accent': affinityAccentColor(accent) } as React.CSSProperties}>
+        <Icon size={20} />
+      </span>
+      <strong>{trimmed || '—'}</strong>
+    </div>
+  );
+}
+
+function AffinityIconPicker({ value, onSelect }: { value: AffinityIcon; onSelect: (icon: AffinityIcon) => void }) {
+  const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
+  const searchId = useId();
+
+  const groups = useMemo(
+    () =>
+      affinityIconGroups
+        .map((group) => ({
+          ...group,
+          icons: group.icons.filter((icon) => matchesAffinityIconQuery(icon, deferredQuery)),
+        }))
+        .filter((group) => group.icons.length > 0),
+    [deferredQuery],
+  );
+
+  return (
+    <fieldset className="affinity-choice-field">
+      <legend id={`${searchId}-legend`}>Ícone</legend>
+      <input
+        id={searchId}
+        className="affinity-icon-search"
+        type="search"
+        value={query}
+        placeholder="Buscar"
+        aria-labelledby={`${searchId}-legend`}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+      {groups.length === 0 ? (
+        <p className="affinity-icon-none">
+          <SearchX size={16} aria-hidden="true" /> Nenhum ícone para “{query.trim()}”
+        </p>
+      ) : (
+        <div className="affinity-icon-catalog" role="group" aria-labelledby={`${searchId}-legend`}>
+          {groups.map((group) => (
+            <div className="affinity-icon-group" key={group.id}>
+              <p>{group.label}</p>
+              <div className="affinity-icon-options">
+                {group.icons.map((icon) => {
+                  const Icon = affinityIconComponents[icon] ?? Sparkles;
+                  return (
+                    <button
+                      key={icon}
+                      className={value === icon ? 'selected' : ''}
+                      type="button"
+                      title={affinityIconLabel(icon)}
+                      aria-label={affinityIconLabel(icon)}
+                      aria-pressed={value === icon}
+                      onClick={() => onSelect(icon)}
+                    >
+                      <Icon size={19} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
+function AffinityAccentPicker({ value, onSelect }: { value: AffinityAccent; onSelect: (accent: AffinityAccent) => void }) {
+  return (
+    <fieldset className="affinity-choice-field">
+      <legend>Cor</legend>
+      <div className="affinity-color-options">
+        {affinityAccentOptions.map((option) => (
+          <button
+            key={option.value}
+            className={value === option.value ? 'selected' : ''}
+            type="button"
+            title={option.label}
+            aria-label={option.label}
+            aria-pressed={value === option.value}
+            style={{ '--swatch': option.color } as React.CSSProperties}
+            onClick={() => onSelect(option.value)}
+          >
+            <span />
+          </button>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
