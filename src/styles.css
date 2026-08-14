@@ -3599,6 +3599,107 @@ svg text {
   }
 }
 
+.review-moderation-page {
+  display: grid;
+  gap: 18px;
+}
+
+.review-report-list {
+  display: grid;
+  gap: 14px;
+}
+
+.review-report-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 14px;
+  background: rgb(var(--color-surface-container));
+  padding: 18px;
+}
+
+.review-report-head,
+.review-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-report-head span,
+.review-report-details dt {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+}
+
+.review-report-head h2,
+.review-copy,
+.review-report-details dd {
+  margin: 3px 0 0;
+}
+
+.review-status {
+  border-radius: 999px;
+  background: rgb(var(--color-surface-container-highest));
+  padding: 5px 10px;
+  font-weight: 800;
+}
+
+.review-status.pending { color: rgb(var(--color-tertiary)); }
+.review-status.kept { color: rgb(var(--color-primary)); }
+.review-status.hidden { color: rgb(var(--color-error)); }
+
+.review-stars {
+  display: inline-flex;
+  gap: 2px;
+  color: rgb(var(--color-outline));
+}
+
+.review-stars .filled {
+  fill: rgb(var(--color-primary));
+  color: rgb(var(--color-primary));
+}
+
+.review-report-card blockquote {
+  display: grid;
+  gap: 4px;
+  border-left: 3px solid rgb(var(--color-primary));
+  background: rgb(var(--color-surface-container-high));
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.review-report-details {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.review-report-details div {
+  min-width: 0;
+}
+
+.review-report-details dd {
+  overflow-wrap: anywhere;
+}
+
+.review-report-actions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 680px) {
+  .review-report-details {
+    grid-template-columns: 1fr;
+  }
+
+  .review-report-actions .button {
+    flex: 1;
+  }
+}
+
 @media (max-width: 760px) {
   .email-field-grid,
   .email-field-grid.sender-grid,

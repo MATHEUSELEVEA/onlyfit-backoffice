@@ -72,6 +72,7 @@ import { AppStoreProductDialog } from './components/AppStoreProductDialog';
 import { BetaFeedbackPage } from './components/BetaFeedback';
 import { EmailCenterPage } from './components/EmailCenter';
 import { MarketSettingsPage } from './components/MarketSettingsPage';
+import { ReviewModerationPage } from './components/ReviewModerationPage';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -90,7 +91,7 @@ const navItems = [
   { id: 'beta-feedback', label: 'Feedback Beta', icon: MessageSquareWarning },
   { id: 'email-center', label: 'E-mails', icon: Mail },
   { id: 'users', label: 'Equipe', icon: Users },
-  { label: 'Moderação', icon: Shield, disabled: true },
+  { id: 'review-moderation', label: 'Moderação', icon: Shield },
   { label: 'Alertas', icon: Bell, disabled: true },
 ] as const;
 
@@ -106,7 +107,8 @@ type SectionId =
   | 'email-center'
   | 'invite-only'
   | 'first-contact'
-  | 'users';
+  | 'users'
+  | 'review-moderation';
 
 const billingTypeOptions: ReadonlyArray<{ value: BillingType; label: string }> = [
   { value: 'one_time', label: 'Pagamento único' },
@@ -2420,6 +2422,7 @@ function AppShell() {
         {activeSection === 'invite-only' && <InviteOnlyPage />}
         {activeSection === 'first-contact' && <FirstContactPage />}
         {activeSection === 'users' && <UsersPage />}
+        {activeSection === 'review-moderation' && <ReviewModerationPage />}
       </div>
     </div>
   );
