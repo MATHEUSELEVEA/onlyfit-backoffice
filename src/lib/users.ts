@@ -476,8 +476,6 @@ const TABLE_LABELS: Record<string, string> = {
   challenge_task_completions: 'Tarefas de desafio concluídas',
   business_offerings: 'Ofertas de negócio',
   offering_entitlements: 'Acessos concedidos',
-  products: 'Produtos',
-  product_purchases: 'Compras de produtos',
   courses: 'Cursos',
   course_completions: 'Conclusões de curso',
   course_lesson_progress: 'Progresso em aulas',

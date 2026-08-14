@@ -158,7 +158,6 @@ const statLabels: Record<string, string> = {
   challenges_created: 'Desafios criados',
   challenge_participations: 'Desafios que participa',
   offerings: 'Ofertas',
-  products: 'Produtos',
   courses: 'Cursos',
   organizations: 'Negócios',
   training_programs: 'Programas de treino',
@@ -235,17 +234,6 @@ const recentSections: ReadonlyArray<{ key: string; title: string; columns: Recen
       { key: 'status', label: 'Status' },
       { key: 'price', label: 'Preço', kind: 'currency' },
       { key: 'created_at', label: 'Criada em', kind: 'date' },
-    ],
-  },
-  {
-    key: 'products',
-    title: 'Produtos',
-    columns: [
-      { key: 'name', label: 'Produto' },
-      { key: 'price', label: 'Preço', kind: 'currency' },
-      { key: 'published', label: 'Publicado', kind: 'boolean' },
-      { key: 'sales', label: 'Vendas', kind: 'number' },
-      { key: 'created_at', label: 'Criado em', kind: 'date' },
     ],
   },
   {
