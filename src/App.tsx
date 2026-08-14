@@ -71,6 +71,7 @@ import { InviteOnlyPage } from './components/InviteOnly';
 import { AppStoreProductDialog } from './components/AppStoreProductDialog';
 import { BetaFeedbackPage } from './components/BetaFeedback';
 import { EmailCenterPage } from './components/EmailCenter';
+import { MarketSettingsPage } from './components/MarketSettingsPage';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -81,6 +82,7 @@ const navItems = [
     children: [{ id: 'invite-only', label: 'Invite Only', icon: Ticket }],
   },
   { id: 'feed', label: 'Feed', icon: Rss },
+  { id: 'market-settings', label: 'Mercado', icon: ShoppingBag },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
   { id: 'first-contact', label: 'Primeiro contato', icon: MessageSquareOff },
@@ -96,6 +98,7 @@ type SectionId =
   | 'dashboard'
   | 'members'
   | 'feed'
+  | 'market-settings'
   | 'offering-types'
   | 'offerings'
   | 'finance'
@@ -2408,6 +2411,7 @@ function AppShell() {
         {activeSection === 'dashboard' && <Dashboard />}
         {activeSection === 'members' && <UsersDirectoryPage />}
         {activeSection === 'feed' && <FeedAlgorithmPage />}
+        {activeSection === 'market-settings' && <MarketSettingsPage />}
         {activeSection === 'offering-types' && <OfferingTypesPage />}
         {activeSection === 'offerings' && <OfferingCatalogPage />}
         {activeSection === 'finance' && <FinancePage />}
