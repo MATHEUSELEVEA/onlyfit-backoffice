@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type OfferingCatalogSource = 'business_offering' | 'market_product';
+export type OfferingCatalogSource = 'business_offering';
 export type OfferingCatalogStatus = 'draft' | 'active' | 'paused' | 'archived';
 export type AppStoreProductStatus = 'pending' | 'ready' | 'retired';
 export type AppStoreProductType = 'auto_renewable_subscription' | 'non_consumable';
@@ -104,13 +104,12 @@ function settingsReady(offeringType: string | null, settings: Record<string, unk
   }
 }
 
-const SOURCES: OfferingCatalogSource[] = ['business_offering', 'market_product'];
 const STATUSES: OfferingCatalogStatus[] = ['draft', 'active', 'paused', 'archived'];
 
 function parseCatalogItem(value: unknown): OfferingCatalogItem {
   const row = asRecord(value);
   const settings = asRecord(row.settings);
-  const source = SOURCES.includes(row.source as OfferingCatalogSource) ? row.source as OfferingCatalogSource : 'business_offering';
+  const source: OfferingCatalogSource = 'business_offering';
   const offeringType = stringOrNull(row.offering_type);
   const name = String(row.name ?? 'Oferta');
   const financialStatus = String(row.financial_status ?? 'unknown');
@@ -240,12 +239,4 @@ export async function upsertAppStoreProduct(input: AppStoreProductInput): Promis
     p_subscription_group_reference: input.subscriptionGroupReference,
   });
   if (error) throw error;
-}
-
-export async function syncProductOffering(productId: string): Promise<string | null> {
-  const { data, error } = await supabase.rpc('control_sync_product_financial_offering', {
-    p_product_id: productId,
-  });
-  if (error) throw error;
-  return stringOrNull(asRecord(data).business_offering_id);
 }
