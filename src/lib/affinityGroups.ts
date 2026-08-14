@@ -1,4 +1,8 @@
+import { affinityAccents, affinityIcons, type AffinityAccent, type AffinityIcon } from './affinityCatalog';
 import { supabase } from './supabase';
+
+export { affinityAccents, affinityIcons };
+export type { AffinityAccent, AffinityIcon };
 
 export type AffinityImpact = {
   interested_users: number;
@@ -42,19 +46,6 @@ export type AffinityAuditEntry = {
   actor_user_id: string | null;
   actor_name: string | null;
 };
-
-export const affinityIcons = ['Dumbbell', 'Sparkles', 'Swords', 'Footprints', 'Medal', 'Apple'] as const;
-export type AffinityIcon = typeof affinityIcons[number];
-
-export const affinityAccents = [
-  'from-amber-500/30',
-  'from-rose-500/30',
-  'from-red-500/30',
-  'from-orange-500/30',
-  'from-violet-500/30',
-  'from-lime-500/30',
-] as const;
-export type AffinityAccent = typeof affinityAccents[number];
 
 const numberFrom = (value: unknown) => {
   const parsed = Number(value);
