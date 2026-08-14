@@ -28,6 +28,7 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   Sparkles,
+  Tags,
   Ticket,
   UserPlus,
   Users,
@@ -73,6 +74,7 @@ import { BetaFeedbackPage } from './components/BetaFeedback';
 import { EmailCenterPage } from './components/EmailCenter';
 import { MarketSettingsPage } from './components/MarketSettingsPage';
 import { ReviewModerationPage } from './components/ReviewModerationPage';
+import { AffinityGroupsPage } from './components/AffinityGroupsPage';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -83,6 +85,7 @@ const navItems = [
     children: [{ id: 'invite-only', label: 'Invite Only', icon: Ticket }],
   },
   { id: 'feed', label: 'Feed', icon: Rss },
+  { id: 'affinity-groups', label: 'Grupos de afinidade', icon: Tags },
   { id: 'market-settings', label: 'Mercado', icon: ShoppingBag },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
@@ -99,6 +102,7 @@ type SectionId =
   | 'dashboard'
   | 'members'
   | 'feed'
+  | 'affinity-groups'
   | 'market-settings'
   | 'offering-types'
   | 'offerings'
@@ -2413,6 +2417,7 @@ function AppShell() {
         {activeSection === 'dashboard' && <Dashboard />}
         {activeSection === 'members' && <UsersDirectoryPage />}
         {activeSection === 'feed' && <FeedAlgorithmPage />}
+        {activeSection === 'affinity-groups' && <AffinityGroupsPage />}
         {activeSection === 'market-settings' && <MarketSettingsPage />}
         {activeSection === 'offering-types' && <OfferingTypesPage />}
         {activeSection === 'offerings' && <OfferingCatalogPage />}
