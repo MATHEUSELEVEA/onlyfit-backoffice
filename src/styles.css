@@ -3309,6 +3309,427 @@ svg text {
   gap: 10px;
 }
 
+/* ------------------------------------------------------------------ */
+/* Grupos de afinidade                                                 */
+/* ------------------------------------------------------------------ */
+
+.affinity-page {
+  gap: 16px;
+}
+
+.affinity-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.affinity-summary span {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: baseline;
+  gap: 6px;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  padding: 8px 11px;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+}
+
+.affinity-summary strong {
+  color: rgb(var(--color-on-surface));
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.affinity-workspace {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.affinity-workspace.has-editor {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+}
+
+.affinity-list-panel,
+.affinity-editor,
+.affinity-audit-panel {
+  min-width: 0;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 12px;
+  background: rgb(var(--color-surface));
+}
+
+.affinity-list-panel {
+  overflow: hidden;
+}
+
+.affinity-list {
+  display: grid;
+}
+
+.affinity-row {
+  display: grid;
+  min-width: 0;
+  min-height: 78px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgb(var(--color-outline-variant));
+  padding: 12px 14px 12px 8px;
+  grid-template-columns: 34px 42px minmax(160px, 1fr) auto auto auto;
+  transition: background-color 160ms ease, opacity 160ms ease;
+}
+
+.affinity-row:last-child {
+  border-bottom: 0;
+}
+
+.affinity-row:hover {
+  background: rgb(var(--color-surface-container-low) / 0.72);
+}
+
+.affinity-row.inactive {
+  background: rgb(var(--color-surface-container-lowest) / 0.42);
+}
+
+.affinity-row.dragging {
+  opacity: 0.48;
+}
+
+.affinity-order-actions {
+  display: flex;
+  align-items: center;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.affinity-order-actions > svg {
+  flex: 0 0 auto;
+}
+
+.affinity-order-actions > div {
+  display: grid;
+}
+
+.affinity-order-actions button {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: rgb(var(--color-on-surface-variant));
+  padding: 0;
+}
+
+.affinity-order-actions button:disabled {
+  opacity: 0.28;
+}
+
+.affinity-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--affinity-accent) 18%, transparent);
+  color: var(--affinity-accent);
+}
+
+.affinity-row.inactive .affinity-icon {
+  filter: saturate(0.2);
+  opacity: 0.72;
+}
+
+.affinity-row-main {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.affinity-row-main > div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.affinity-row-main strong {
+  color: rgb(var(--color-on-surface));
+  font-size: 14px;
+}
+
+.affinity-row-main code,
+.affinity-key-note code {
+  border-radius: 6px;
+  background: rgb(var(--color-surface-container));
+  padding: 2px 6px;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+}
+
+.affinity-row-main > span {
+  overflow: hidden;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.affinity-impact-compact {
+  display: grid;
+  justify-items: end;
+  line-height: 1.15;
+}
+
+.affinity-impact-compact strong {
+  color: rgb(var(--color-on-surface));
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.affinity-impact-compact span {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 10px;
+}
+
+.affinity-status {
+  display: inline-flex;
+  min-width: 58px;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgb(var(--color-surface-container));
+  color: rgb(var(--color-on-surface-variant));
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.affinity-status.active {
+  background: rgb(var(--color-primary) / 0.12);
+  color: rgb(var(--color-primary));
+}
+
+.affinity-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.affinity-editor {
+  position: sticky;
+  top: 16px;
+  padding: 18px;
+}
+
+.affinity-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.affinity-section-heading h2 {
+  margin: 0;
+  color: rgb(var(--color-on-surface));
+  font-size: 16px;
+}
+
+.affinity-section-heading span {
+  display: block;
+  margin-top: 4px;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+}
+
+.affinity-editor form {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.affinity-field,
+.affinity-choice-field {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.affinity-field > span,
+.affinity-choice-field legend {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.affinity-field input,
+.affinity-field textarea {
+  width: 100%;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  color: rgb(var(--color-on-surface));
+  padding: 11px 12px;
+  resize: vertical;
+}
+
+.affinity-field input {
+  min-height: 44px;
+}
+
+.affinity-icon-options,
+.affinity-color-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.affinity-icon-options button,
+.affinity-color-options button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.affinity-icon-options button.selected,
+.affinity-color-options button.selected {
+  border-color: rgb(var(--color-primary));
+  color: rgb(var(--color-primary));
+}
+
+.affinity-color-options button span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--swatch);
+}
+
+.affinity-key-note,
+.affinity-muted {
+  margin: 0;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.affinity-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.affinity-loading {
+  display: grid;
+  gap: 1px;
+}
+
+.affinity-loading .skeleton {
+  height: 78px;
+  border-radius: 0;
+}
+
+.affinity-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  gap: 9px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+.affinity-audit-panel {
+  padding: 18px;
+}
+
+.affinity-audit-list {
+  display: grid;
+  margin: 16px 0 0;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+}
+
+.affinity-audit-list li {
+  display: grid;
+  min-height: 54px;
+  align-items: start;
+  gap: 10px;
+  border-top: 1px solid rgb(var(--color-outline-variant));
+  padding: 11px 0;
+  grid-template-columns: 10px minmax(0, 1fr);
+}
+
+.affinity-audit-list li:first-child {
+  border-top: 0;
+}
+
+.affinity-audit-list li > div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.affinity-audit-list strong {
+  color: rgb(var(--color-on-surface));
+  font-size: 12px;
+}
+
+.affinity-audit-list span,
+.affinity-audit-list small {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+}
+
+.affinity-audit-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: rgb(var(--color-outline));
+}
+
+.affinity-audit-dot.activate,
+.affinity-audit-dot.create {
+  background: rgb(var(--color-primary));
+}
+
+.affinity-audit-dot.deactivate {
+  background: rgb(var(--color-error));
+}
+
+.affinity-audit-skeleton,
+.affinity-impact-skeleton {
+  min-height: 120px;
+  margin-top: 14px;
+}
+
+.affinity-dialog {
+  width: min(680px, calc(100vw - 32px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .affinity-row {
+    transition: none;
+  }
+}
+
 @media (max-width: 1280px) {
   .lower-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3321,6 +3742,10 @@ svg text {
   .feed-command-panel {
     grid-template-columns: 1fr;
   }
+
+  .affinity-workspace.has-editor {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  }
 }
 
 @media (max-width: 1080px) {
@@ -3330,6 +3755,15 @@ svg text {
 
   .ops-panel {
     grid-column: auto;
+  }
+
+  .affinity-workspace.has-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .affinity-editor {
+    position: static;
+    grid-row: 1;
   }
 
   .finance-settings-grid {
@@ -3909,5 +4343,56 @@ svg text {
   .invite-switch-track,
   .invite-switch-thumb {
     transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .affinity-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .affinity-summary span:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .affinity-row {
+    gap: 9px;
+    padding: 12px 10px 14px 6px;
+    grid-template-columns: 30px 40px minmax(0, 1fr) auto;
+  }
+
+  .affinity-row-main {
+    grid-column: 3 / -1;
+  }
+
+  .affinity-impact-compact {
+    grid-column: 3;
+    justify-items: start;
+  }
+
+  .affinity-status {
+    grid-column: 4;
+  }
+
+  .affinity-row-actions {
+    grid-column: 3 / -1;
+    justify-content: flex-start;
+  }
+
+  .affinity-editor,
+  .affinity-audit-panel {
+    padding: 16px;
+  }
+
+  .affinity-editor-actions,
+  .affinity-dialog .user-dialog-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .affinity-editor-actions .button,
+  .affinity-dialog .user-dialog-actions .button {
+    width: 100%;
   }
 }
