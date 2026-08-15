@@ -3292,7 +3292,8 @@ svg text {
 }
 
 .user-dialog-field input,
-.user-dialog-field select {
+.user-dialog-field select,
+.user-dialog-field textarea {
   min-height: 44px;
   border: 1px solid rgb(var(--color-outline-variant));
   border-radius: 10px;
@@ -3300,6 +3301,12 @@ svg text {
   color: rgb(var(--color-on-surface));
   padding: 0 12px;
   font-size: 13px;
+}
+
+.user-dialog-field textarea {
+  min-height: 112px;
+  padding-block: 10px;
+  resize: vertical;
 }
 
 .user-dialog-actions {

@@ -600,7 +600,7 @@ export function PayoutQueuePanel({ canEdit }: { canEdit: boolean }) {
                   ) : null}
                   <th>Profissional</th>
                   <th>Valor</th>
-                  <th>PIX (CPF)</th>
+                  <th>Chave PIX</th>
                   <th>Status</th>
                   <th>Solicitado</th>
                   <th><span className="sr-only">Ações</span></th>
@@ -627,7 +627,7 @@ export function PayoutQueuePanel({ canEdit }: { canEdit: boolean }) {
                         <span>{request.professional_username ? `@${request.professional_username}` : request.professional_profile_id.slice(0, 8)}</span>
                       </td>
                       <td><strong>{formatCurrencyExact(request.amount)}</strong></td>
-                      <td>•••• {request.pix_key_last4}</td>
+                      <td><strong>{request.pix_key_type}</strong> · •••• {request.pix_key_last4}</td>
                       <td><span className={`role-badge role-${request.status}`}>{payoutStatusLabel(request.status)}</span></td>
                       <td>{request.requested_at ? formatDateTime(new Date(request.requested_at)) : '—'}</td>
                       <td className="staff-actions-cell">
