@@ -2000,7 +2000,8 @@ svg text {
 }
 
 .staff-form input,
-.staff-form select {
+.staff-form select,
+.staff-form textarea {
   min-height: 44px;
   width: 100%;
   border: 1px solid rgb(var(--color-outline-variant));
@@ -2008,6 +2009,46 @@ svg text {
   background: rgb(var(--color-surface-container-low));
   color: rgb(var(--color-on-surface));
   padding: 0 12px;
+}
+
+.staff-form textarea {
+  resize: vertical;
+}
+
+.legal-documents-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.legal-document-form .staff-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.legal-field-wide {
+  grid-column: 1 / -1;
+}
+
+.legal-check {
+  display: flex !important;
+  min-height: 2.75rem;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.legal-check input {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+@media (max-width: 720px) {
+  .legal-document-form .staff-form {
+    grid-template-columns: 1fr;
+  }
+
+  .legal-field-wide {
+    grid-column: auto;
+  }
 }
 
 .staff-form small {

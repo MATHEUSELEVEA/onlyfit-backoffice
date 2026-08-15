@@ -12,6 +12,7 @@ import {
   HandCoins,
   Heart,
   LayoutDashboard,
+  FileText,
   LogOut,
   MessageCircle,
   Mail,
@@ -77,6 +78,7 @@ import { MarketSettingsPage } from './components/MarketSettingsPage';
 import { ReviewModerationPage } from './components/ReviewModerationPage';
 import { AffinityGroupsPage } from './components/AffinityGroupsPage';
 import { ProfessionalCredentialsPage } from './components/ProfessionalCredentialsPage';
+import { LegalDocumentsPage } from './components/LegalDocumentsPage';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -93,6 +95,7 @@ const navItems = [
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
   { id: 'first-contact', label: 'Primeiro contato', icon: MessageSquareOff },
   { id: 'professional-credentials', label: 'Registros profissionais', icon: ClipboardCheck },
+  { id: 'legal-documents', label: 'Documentos legais', icon: FileText },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
   { id: 'beta-feedback', label: 'Feedback Beta', icon: MessageSquareWarning },
   { id: 'email-center', label: 'E-mails', icon: Mail },
@@ -115,6 +118,7 @@ type SectionId =
   | 'invite-only'
   | 'first-contact'
   | 'professional-credentials'
+  | 'legal-documents'
   | 'users'
   | 'review-moderation';
 
@@ -2431,6 +2435,7 @@ function AppShell() {
         {activeSection === 'invite-only' && <InviteOnlyPage />}
         {activeSection === 'first-contact' && <FirstContactPage />}
         {activeSection === 'professional-credentials' && <ProfessionalCredentialsPage />}
+        {activeSection === 'legal-documents' && <LegalDocumentsPage />}
         {activeSection === 'users' && <UsersPage />}
         {activeSection === 'review-moderation' && <ReviewModerationPage />}
       </div>
