@@ -1,6 +1,7 @@
 import { CheckCircle2, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import { useState } from 'react';
 import { useProfessionalCredentialReviews, useReviewProfessionalCredential } from '../hooks/useProfessionalCredentials';
+import { useProfessionalSpecialties } from '../hooks/useProfessionalSpecialties';
 import type { CredentialStatus, ProfessionalCredentialReview } from '../lib/professionalCredentials';
 import { formatDateTime } from '../lib/format';
 
@@ -16,6 +17,10 @@ export function ProfessionalCredentialsPage() {
   const [reason, setReason] = useState('');
   const query = useProfessionalCredentialReviews(status);
   const review = useReviewProfessionalCredential();
+  // G20: a fila mostra o rótulo em português do catálogo, não a chave técnica.
+  const specialties = useProfessionalSpecialties();
+  const specialtyLabel = (key: string) =>
+    specialties.data?.find((item) => item.key === key)?.label ?? key;
 
   async function reject() {
     if (!rejecting || reason.trim().length < 3) return;
@@ -58,7 +63,7 @@ export function ProfessionalCredentialsPage() {
               <tbody>{query.data.items.map((item) => (
                 <tr key={item.id}>
                   <td><strong>{item.fullName}</strong><span>{item.username ? `@${item.username}` : item.profileId.slice(0, 8)}</span></td>
-                  <td>{item.specialty}</td>
+                  <td>{specialtyLabel(item.specialty)}</td>
                   <td><span className="role-badge">{item.council} · {item.jurisdiction}</span></td>
                   <td><strong>{item.registration}</strong></td>
                   <td>{item.createdAt ? formatDateTime(new Date(item.createdAt)) : '—'}</td>

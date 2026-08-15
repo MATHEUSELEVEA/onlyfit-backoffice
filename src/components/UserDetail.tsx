@@ -20,6 +20,7 @@ import {
   type UserRecentItem,
 } from '../lib/users';
 import { useUpdateUserAccount, useUserFootprint, useUserOverview } from '../hooks/useUsers';
+import { useProfessionalSpecialties } from '../hooks/useProfessionalSpecialties';
 import { UserDeleteDialog } from './UserDeleteDialog';
 
 type TabId = 'cadastro' | 'plataforma' | 'raiox';
@@ -120,21 +121,6 @@ const creatorStatusOptions = [
   { value: 'pending_kyc', label: 'KYC pendente' },
   { value: 'active_creator', label: 'Criador ativo' },
   { value: 'suspended', label: 'Suspenso' },
-];
-
-const specialtyOptions = [
-  { value: '', label: 'Nenhuma' },
-  { value: 'medicine', label: 'Medicina' },
-  { value: 'nutrition', label: 'Nutrição' },
-  { value: 'physiotherapy', label: 'Fisioterapia' },
-  { value: 'physical_education', label: 'Educação física' },
-  { value: 'psychology', label: 'Psicologia' },
-  { value: 'nursing', label: 'Enfermagem' },
-  { value: 'dentistry', label: 'Odontologia' },
-  { value: 'speech_therapy', label: 'Fonoaudiologia' },
-  { value: 'occupational_therapy', label: 'Terapia ocupacional' },
-  { value: 'pharmacy', label: 'Farmácia' },
-  { value: 'biomedicine', label: 'Biomedicina' },
 ];
 
 const booleanLabels: Record<(typeof BOOLEAN_FIELDS)[number], string> = {
@@ -385,6 +371,17 @@ function ProfileForm({
   onSaved: (message: string) => void;
 }) {
   const updateMutation = useUpdateUserAccount();
+  // G20 regra 8: a taxonomia vem do catálogo governado, nunca de uma constante
+  // replicada aqui. O staff enxerga inclusive as inativas, para não perder o
+  // rótulo de quem já foi validado numa especialidade desativada.
+  const specialties = useProfessionalSpecialties();
+  const specialtyOptions = useMemo(
+    () => [
+      { value: '', label: 'Nenhuma' },
+      ...(specialties.data ?? []).map((item) => ({ value: item.key, label: item.label })),
+    ],
+    [specialties.data],
+  );
   const [saved, setSaved] = useState<UserProfileRecord | null>(null);
   // Depois de salvar, o cadastro gravado vira a nova referência.
   const source = saved && saved.id === profile.id ? saved : profile;
