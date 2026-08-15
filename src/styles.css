@@ -456,6 +456,15 @@ textarea:focus-visible {
   padding: 24px 32px 32px;
 }
 
+.consultancy-settings-form {
+  display: grid;
+  gap: 18px;
+}
+
+.consultancy-settings-form .header-actions {
+  justify-content: flex-end;
+}
+
 .email-center-page {
   gap: 16px;
 }

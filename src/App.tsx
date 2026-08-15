@@ -10,6 +10,7 @@ import {
   Dumbbell,
   Gauge,
   HandCoins,
+  Handshake,
   Heart,
   LayoutDashboard,
   FileText,
@@ -79,6 +80,7 @@ import { ReviewModerationPage } from './components/ReviewModerationPage';
 import { AffinityGroupsPage } from './components/AffinityGroupsPage';
 import { ProfessionalCredentialsPage } from './components/ProfessionalCredentialsPage';
 import { LegalDocumentsPage } from './components/LegalDocumentsPage';
+import { ConsultancySettingsPage } from './components/ConsultancySettingsPage';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -93,6 +95,7 @@ const navItems = [
   { id: 'market-settings', label: 'Mercado', icon: ShoppingBag },
   { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
   { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
+  { id: 'consultancies', label: 'Consultorias', icon: Handshake },
   { id: 'first-contact', label: 'Primeiro contato', icon: MessageSquareOff },
   { id: 'professional-credentials', label: 'Registros profissionais', icon: ClipboardCheck },
   { id: 'legal-documents', label: 'Documentos legais', icon: FileText },
@@ -112,6 +115,7 @@ type SectionId =
   | 'market-settings'
   | 'offering-types'
   | 'offerings'
+  | 'consultancies'
   | 'finance'
   | 'beta-feedback'
   | 'email-center'
@@ -2429,6 +2433,7 @@ function AppShell() {
         {activeSection === 'market-settings' && <MarketSettingsPage />}
         {activeSection === 'offering-types' && <OfferingTypesPage />}
         {activeSection === 'offerings' && <OfferingCatalogPage />}
+        {activeSection === 'consultancies' && <ConsultancySettingsPage />}
         {activeSection === 'finance' && <FinancePage />}
         {activeSection === 'beta-feedback' && <BetaFeedbackPage />}
         {activeSection === 'email-center' && <EmailCenterPage />}
