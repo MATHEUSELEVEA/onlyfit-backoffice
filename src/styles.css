@@ -5107,3 +5107,220 @@ svg text {
     transition: none;
   }
 }
+
+/* G20 — governo das especialidades profissionais.
+   Vocabulário próprio: a lista de afinidade usa um grid de 6 colunas pensado
+   para ícone e cor, que esta página não tem. */
+.specialty-page {
+  display: grid;
+  gap: 16px;
+}
+
+.specialty-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.specialty-summary span {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: baseline;
+  gap: 6px;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface-container-low));
+  padding: 8px 11px;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+}
+
+.specialty-summary strong {
+  color: rgb(var(--color-on-surface));
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.specialty-workspace {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.specialty-workspace.has-editor {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+}
+
+.specialty-list-panel,
+.specialty-editor {
+  min-width: 0;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 12px;
+  background: rgb(var(--color-surface-container));
+}
+
+.specialty-editor {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.specialty-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.specialty-row {
+  display: flex;
+  min-width: 0;
+  min-height: 72px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgb(var(--color-outline-variant));
+  padding: 12px 14px;
+}
+
+.specialty-row:last-child {
+  border-bottom: 0;
+}
+
+.specialty-row-main {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 260px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.specialty-row-main > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.specialty-row-main strong {
+  color: rgb(var(--color-on-surface));
+  font-size: 14px;
+}
+
+.specialty-row-main code {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 11px;
+}
+
+.specialty-status {
+  display: inline-flex;
+  min-width: 58px;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgb(var(--color-surface-container-high));
+  color: rgb(var(--color-on-surface-variant));
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.specialty-status.active {
+  background: rgb(var(--color-primary) / 0.12);
+  color: rgb(var(--color-primary));
+}
+
+.specialty-muted {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+}
+
+.specialty-row-actions,
+.specialty-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.specialty-editor-actions {
+  justify-content: flex-end;
+}
+
+.specialty-order-actions > div {
+  display: grid;
+  gap: 2px;
+}
+
+.specialty-order-actions button {
+  display: grid;
+  width: 26px;
+  height: 22px;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 6px;
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-on-surface-variant));
+  place-items: center;
+}
+
+.specialty-order-actions button:disabled {
+  opacity: 0.4;
+}
+
+.specialty-field {
+  display: grid;
+  gap: 6px;
+}
+
+.specialty-field span {
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+}
+
+.specialty-field input {
+  min-height: 40px;
+  border: 1px solid rgb(var(--color-outline-variant));
+  border-radius: 10px;
+  background: rgb(var(--color-surface));
+  padding: 0 12px;
+  color: rgb(var(--color-on-surface));
+}
+
+.specialty-choice-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+}
+
+.specialty-key-note {
+  margin: 0;
+  color: rgb(var(--color-on-surface-variant));
+  font-size: 12px;
+}
+
+.specialty-section-heading {
+  margin: 0;
+  color: rgb(var(--color-on-surface));
+  font-size: 15px;
+}
+
+.specialty-loading,
+.specialty-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  gap: 9px;
+  color: rgb(var(--color-on-surface-variant));
+}
+
+@media (max-width: 1100px) {
+  .specialty-workspace.has-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

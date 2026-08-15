@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   CreditCard,
   ClipboardCheck,
+  Stethoscope,
   Dumbbell,
   Gauge,
   HandCoins,
@@ -79,6 +80,7 @@ import { MarketSettingsPage } from './components/MarketSettingsPage';
 import { ReviewModerationPage } from './components/ReviewModerationPage';
 import { AffinityGroupsPage } from './components/AffinityGroupsPage';
 import { ProfessionalCredentialsPage } from './components/ProfessionalCredentialsPage';
+import { ProfessionalSpecialtiesPage } from './components/ProfessionalSpecialtiesPage';
 import { LegalDocumentsPage } from './components/LegalDocumentsPage';
 import { ConsultancySettingsPage } from './components/ConsultancySettingsPage';
 
@@ -98,6 +100,7 @@ const navItems = [
   { id: 'consultancies', label: 'Consultorias', icon: Handshake },
   { id: 'first-contact', label: 'Primeiro contato', icon: MessageSquareOff },
   { id: 'professional-credentials', label: 'Registros profissionais', icon: ClipboardCheck },
+  { id: 'professional-specialties', label: 'Especialidades', icon: Stethoscope },
   { id: 'legal-documents', label: 'Documentos legais', icon: FileText },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
   { id: 'beta-feedback', label: 'Feedback Beta', icon: MessageSquareWarning },
@@ -112,6 +115,7 @@ type SectionId =
   | 'members'
   | 'feed'
   | 'affinity-groups'
+  | 'professional-specialties'
   | 'market-settings'
   | 'offering-types'
   | 'offerings'
@@ -2430,6 +2434,7 @@ function AppShell() {
         {activeSection === 'members' && <UsersDirectoryPage />}
         {activeSection === 'feed' && <FeedAlgorithmPage />}
         {activeSection === 'affinity-groups' && <AffinityGroupsPage />}
+        {activeSection === 'professional-specialties' && <ProfessionalSpecialtiesPage />}
         {activeSection === 'market-settings' && <MarketSettingsPage />}
         {activeSection === 'offering-types' && <OfferingTypesPage />}
         {activeSection === 'offerings' && <OfferingCatalogPage />}
