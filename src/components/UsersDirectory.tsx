@@ -31,7 +31,7 @@ function UserRow({ user, onOpen }: { user: UserListItem; onOpen: () => void }) {
         <strong>{user.email ?? '—'}</strong>
         <span>{user.phone ?? 'sem telefone'}</span>
       </td>
-      <td>{user.has_cpf ? formatDocument(null, user.cpf_last4) : '—'}</td>
+      <td>{user.has_cpf ? formatDocument(user.cpf_last4) : '—'}</td>
       <td>
         <div className="user-badges">
           {user.staff_role && <span className="role-badge role-admin">Equipe</span>}
@@ -138,7 +138,7 @@ export function UsersDirectoryPage() {
             <Search size={16} />
             <input
               value={queryInput}
-              placeholder="Nome, @usuário, e-mail, CPF ou telefone"
+              placeholder="Nome, @usuário, e-mail, telefone ou 4 finais do CPF"
               aria-label="Buscar usuário"
               onChange={(event) => setQueryInput(event.target.value)}
             />

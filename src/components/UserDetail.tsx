@@ -12,6 +12,7 @@ import { formatCurrencyExact, formatDateTime, formatNumber } from '../lib/format
 import {
   displayName,
   formatDocument,
+  primaryCpf,
   tableLabel,
   userAdminErrorMessage,
   type UserOverview,
@@ -315,7 +316,7 @@ function toForm(profile: UserProfileRecord): FormState {
   }
   form.professional_types = profile.professional_types.join(', ');
   form.email = profile.email ?? '';
-  form.cpf = profile.tax_id ?? profile.cpf_cnpj ?? '';
+  form.cpf = '';
   form.password = '';
   return form;
 }
@@ -385,8 +386,7 @@ function ProfileForm({
 }) {
   const updateMutation = useUpdateUserAccount();
   const [saved, setSaved] = useState<UserProfileRecord | null>(null);
-  // Depois de salvar, o cadastro gravado vira a nova referência: o formulário mostra o que
-  // o banco normalizou (@usuário em minúsculas, CPF só com dígitos) em vez do que foi digitado.
+  // Depois de salvar, o cadastro gravado vira a nova referência.
   const source = saved && saved.id === profile.id ? saved : profile;
   const baseline = useMemo(() => toForm(source), [source]);
   const [form, setForm] = useState<FormState>(baseline);
@@ -438,7 +438,7 @@ function ProfileForm({
     }
 
     const emailChanged = form.email.trim().toLowerCase() !== baseline.email.trim().toLowerCase();
-    const cpfChanged = form.cpf.replace(/\D/g, '') !== baseline.cpf.replace(/\D/g, '');
+    const cpfChanged = primaryCpf(source) == null && form.cpf.replace(/\D/g, '').length > 0;
     if (emailChanged && !form.email.trim()) {
       setMessage({ type: 'error', text: 'O e-mail de login não pode ficar vazio.' });
       return;
@@ -459,8 +459,11 @@ function ProfileForm({
       {
         onSuccess: (result) => {
           if (result.profile) {
-            setSaved(result.profile);
-            setForm(toForm(result.profile));
+            const nextProfile = result.profile.identity_documents.length > 0
+              ? result.profile
+              : { ...result.profile, identity_documents: source.identity_documents };
+            setSaved(nextProfile);
+            setForm(toForm(nextProfile));
           } else {
             setForm((current) => ({ ...current, password: '' }));
           }
@@ -528,7 +531,12 @@ function ProfileForm({
           {textField('email', 'E-mail de login', 'Atualiza o login e o cadastro')}
           {textField('secondary_email', 'E-mail secundário')}
           {textField('phone', 'Telefone')}
-          {textField('cpf', 'CPF', 'Somente números; apagar o campo remove o documento')}
+          {primaryCpf(source) ? (
+            <div className="user-field">
+              <span>CPF</span>
+              <strong>{formatDocument(primaryCpf(source)?.last4 ?? null)}</strong>
+            </div>
+          ) : textField('cpf', 'CPF')}
           <label className="user-field">
             <span>Nova senha</span>
             <input
@@ -854,7 +862,7 @@ export function UserDetail({
           </div>
           <div>
             <span>CPF</span>
-            <strong>{formatDocument(profile.tax_id ?? profile.cpf_cnpj, profile.cpf_last4)}</strong>
+            <strong>{formatDocument(primaryCpf(profile)?.last4 ?? null)}</strong>
           </div>
           <div>
             <span>Login por</span>

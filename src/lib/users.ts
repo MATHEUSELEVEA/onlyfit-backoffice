@@ -39,6 +39,15 @@ export type UserSearchPage = {
   items: UserListItem[];
 };
 
+export type IdentityDocumentMetadata = {
+  country_code: string;
+  doc_type: string;
+  last4: string | null;
+  is_primary: boolean;
+  verification_status: string;
+  verified_at: string | null;
+};
+
 /** Campos do cadastro que o backoffice mostra e edita. O resto do perfil vem junto em `extra`. */
 export type UserProfileRecord = {
   id: string;
@@ -51,9 +60,7 @@ export type UserProfileRecord = {
   email: string | null;
   secondary_email: string | null;
   phone: string | null;
-  tax_id: string | null;
-  cpf_cnpj: string | null;
-  cpf_last4: string | null;
+  identity_documents: IdentityDocumentMetadata[];
   city: string | null;
   state: string | null;
   country_code: string | null;
@@ -181,6 +188,24 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
+function parseIdentityDocuments(value: unknown): IdentityDocumentMetadata[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    const countryCode = stringOrNull(row.country_code)?.toUpperCase();
+    const docType = stringOrNull(row.doc_type)?.toLowerCase();
+    if (!countryCode || !docType) return [];
+    return [{
+      country_code: countryCode,
+      doc_type: docType,
+      last4: stringOrNull(row.last4),
+      is_primary: boolFrom(row.is_primary),
+      verification_status: stringOrNull(row.verification_status) ?? 'unverified',
+      verified_at: stringOrNull(row.verified_at),
+    }];
+  });
+}
+
 function numberMap(value: unknown): Record<string, number> {
   const row = asRecord(value);
   return Object.fromEntries(Object.entries(row).map(([key, item]) => [key, numberFrom(item)]));
@@ -226,9 +251,7 @@ function parseProfile(value: unknown): UserProfileRecord {
     email: stringOrNull(row.email),
     secondary_email: stringOrNull(row.secondary_email),
     phone: stringOrNull(row.phone),
-    tax_id: stringOrNull(row.tax_id),
-    cpf_cnpj: stringOrNull(row.cpf_cnpj),
-    cpf_last4: stringOrNull(row.cpf_last4),
+    identity_documents: parseIdentityDocuments(row.identity_documents),
     city: stringOrNull(row.city),
     state: stringOrNull(row.state),
     country_code: stringOrNull(row.country_code),
@@ -433,18 +456,16 @@ export function displayName(user: { full_name?: string | null; preferred_display
     || (user.username ? `@${user.username}` : 'Sem nome');
 }
 
-export function formatDocument(digits: string | null, last4: string | null): string {
-  const clean = (digits ?? '').replace(/\D/g, '');
-  if (clean.length === 11) {
-    return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
-  }
-  if (clean.length === 14) {
-    return `${clean.slice(0, 2)}.${clean.slice(2, 5)}.${clean.slice(5, 8)}/${clean.slice(8, 12)}-${clean.slice(12)}`;
-  }
-  // Sem o número completo, mostramos só os quatro últimos dígitos nas posições reais do CPF.
+export function formatDocument(last4: string | null): string {
   if (last4 && last4.length === 4) return `•••.•••.•${last4.slice(0, 2)}-${last4.slice(2)}`;
   if (last4) return `•••.•••.•••-${last4}`;
   return '—';
+}
+
+export function primaryCpf(profile: Pick<UserProfileRecord, 'identity_documents'>) {
+  return profile.identity_documents.find((document) =>
+    document.country_code === 'BR' && document.doc_type === 'cpf'
+  ) ?? null;
 }
 
 /** Rótulos das tabelas que aparecem no raio-x; sem tradução, mostramos o nome técnico. */
