@@ -16,6 +16,7 @@ export type InvitedEmail = {
   source: 'manual' | 'waitlist_release' | 'grandfathered';
   created_at: string;
   has_account: boolean;
+  invite_email_sent_at: string | null;
 };
 
 export type WaitlistStatus = 'waiting' | 'released';
@@ -88,6 +89,7 @@ function parseInvitedEmail(value: unknown): InvitedEmail {
       source === 'waitlist_release' || source === 'grandfathered' ? source : 'manual',
     created_at: String(row.created_at ?? ''),
     has_account: row.has_account === true,
+    invite_email_sent_at: textOrNull(row.invite_email_sent_at),
   };
 }
 
@@ -227,6 +229,35 @@ export function releaseErrorMessage(code: string): string {
     default:
       return 'Não foi possível liberar o acesso.';
   }
+}
+
+export type SendInviteEmailsResult = {
+  sent: string[];
+  skipped: string[];
+  failed: string[];
+};
+
+/**
+ * Envia (ou reenvia) o e-mail de convite para quem está na allowlist e ainda
+ * não tem conta. Quem já tem conta, ou não está mais na lista, volta em
+ * `skipped` sem erro.
+ */
+export async function sendInviteEmails(emails: string[]): Promise<SendInviteEmailsResult> {
+  const { data, error } = await supabase.functions.invoke('invite-send-email', {
+    body: { emails },
+  });
+
+  if (error) {
+    const detail = await readFunctionError(error);
+    throw new Error(detail ?? 'Não foi possível enviar o e-mail de convite.');
+  }
+
+  const row = asRecord(data);
+  return {
+    sent: stringList(row.sent),
+    skipped: stringList(row.skipped),
+    failed: stringList(row.failed),
+  };
 }
 
 export function invitedSourceLabel(source: InvitedEmail['source']): string {

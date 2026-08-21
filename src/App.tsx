@@ -4,6 +4,7 @@ import {
   BarChart3,
   Bell,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   CreditCard,
   ClipboardCheck,
@@ -13,6 +14,7 @@ import {
   HandCoins,
   Handshake,
   Heart,
+  KeyRound,
   LayoutDashboard,
   FileText,
   LogOut,
@@ -28,6 +30,7 @@ import {
   Rss,
   Save,
   Shield,
+  ShieldOff,
   Shuffle,
   ShoppingBag,
   SlidersHorizontal,
@@ -70,6 +73,8 @@ import {
 } from './lib/offeringTypes';
 import type { OfferingCatalogFilters, OfferingCatalogItem, OfferingCatalogSource, OfferingCatalogStatus } from './lib/offeringCatalog';
 import { MfaGate } from './components/MfaGate';
+import { CredentialResetDialog } from './components/CredentialResetDialog';
+import type { CredentialResetAction } from './lib/credentialReset';
 import { UsersDirectoryPage } from './components/UsersDirectory';
 import { FirstContactPage } from './components/FirstContact';
 import { InviteOnlyPage } from './components/InviteOnly';
@@ -87,28 +92,68 @@ import { ConsultancySettingsPage } from './components/ConsultancySettingsPage';
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   {
-    id: 'members',
+    groupId: 'users',
     label: 'Usuários',
     icon: UsersRound,
-    children: [{ id: 'invite-only', label: 'Invite Only', icon: Ticket }],
+    children: [
+      { id: 'members', label: 'Diretório', icon: UsersRound },
+      { id: 'invite-only', label: 'Invite Only', icon: Ticket },
+      { id: 'users', label: 'Equipe', icon: Users },
+    ],
   },
-  { id: 'feed', label: 'Feed', icon: Rss },
-  { id: 'affinity-groups', label: 'Grupos de afinidade', icon: Tags },
-  { id: 'market-settings', label: 'Mercado', icon: ShoppingBag },
-  { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
-  { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
-  { id: 'consultancies', label: 'Consultorias', icon: Handshake },
-  { id: 'first-contact', label: 'Primeiro contato', icon: MessageSquareOff },
-  { id: 'professional-credentials', label: 'Registros profissionais', icon: ClipboardCheck },
-  { id: 'professional-specialties', label: 'Especialidades', icon: Stethoscope },
-  { id: 'legal-documents', label: 'Documentos legais', icon: FileText },
-  { id: 'finance', label: 'Financeiro', icon: CreditCard },
-  { id: 'beta-feedback', label: 'Feedback Beta', icon: MessageSquareWarning },
-  { id: 'email-center', label: 'E-mails', icon: Mail },
-  { id: 'users', label: 'Equipe', icon: Users },
-  { id: 'review-moderation', label: 'Moderação', icon: Shield },
+  {
+    groupId: 'content',
+    label: 'Conteúdo e comunidade',
+    icon: Rss,
+    children: [
+      { id: 'feed', label: 'Feed', icon: Rss },
+      { id: 'affinity-groups', label: 'Grupos de afinidade', icon: Tags },
+      { id: 'review-moderation', label: 'Moderação', icon: Shield },
+    ],
+  },
+  {
+    groupId: 'commercial',
+    label: 'Comercial',
+    icon: ShoppingBag,
+    children: [
+      { id: 'market-settings', label: 'Mercado', icon: ShoppingBag },
+      { id: 'offering-types', label: 'Tipos de oferta', icon: HandCoins },
+      { id: 'offerings', label: 'Ofertas', icon: ShoppingBag },
+      { id: 'consultancies', label: 'Consultorias', icon: Handshake },
+    ],
+  },
+  {
+    groupId: 'professionals',
+    label: 'Profissionais',
+    icon: Stethoscope,
+    children: [
+      { id: 'professional-credentials', label: 'Registros profissionais', icon: ClipboardCheck },
+      { id: 'professional-specialties', label: 'Especialidades', icon: Stethoscope },
+      { id: 'first-contact', label: 'Primeiro contato', icon: MessageSquareOff },
+    ],
+  },
+  {
+    groupId: 'operations',
+    label: 'Operação',
+    icon: SlidersHorizontal,
+    children: [
+      { id: 'finance', label: 'Financeiro', icon: CreditCard },
+      { id: 'beta-feedback', label: 'Feedback Beta', icon: MessageSquareWarning },
+      { id: 'email-center', label: 'E-mails', icon: Mail },
+      { id: 'legal-documents', label: 'Documentos legais', icon: FileText },
+    ],
+  },
   { label: 'Alertas', icon: Bell, disabled: true },
 ] as const;
+
+function groupIdForSection(section: SectionId): string | null {
+  for (const item of navItems) {
+    if ('groupId' in item && item.children.some((child) => child.id === section)) {
+      return item.groupId;
+    }
+  }
+  return null;
+}
 
 type SectionId =
   | 'dashboard'
@@ -267,6 +312,8 @@ function Sidebar({
   onToggle,
   onSignOut,
   activeSection,
+  openGroups,
+  onToggleGroup,
 }: {
   collapsed: boolean;
   mobileOpen: boolean;
@@ -275,6 +322,8 @@ function Sidebar({
   onToggle: () => void;
   onSignOut: () => void;
   activeSection: SectionId;
+  openGroups: Set<string>;
+  onToggleGroup: (groupId: string) => void;
 }) {
   return (
     <>
@@ -293,47 +342,67 @@ function Sidebar({
         <nav className="nav-list" aria-label="Menu principal">
           {navItems.map((item) => {
             const Icon = item.icon;
+
+            if ('groupId' in item) {
+              const hasActiveChild = item.children.some((child) => child.id === activeSection);
+              const isOpen = collapsed ? hasActiveChild : openGroups.has(item.groupId);
+              return (
+                <div key={item.groupId} className="nav-group">
+                  <button
+                    className={`nav-item nav-group-toggle ${hasActiveChild ? 'has-active-child' : ''}`}
+                    type="button"
+                    aria-expanded={isOpen}
+                    onClick={() => onToggleGroup(item.groupId)}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <Icon size={18} />
+                    {!collapsed && <span>{item.label}</span>}
+                    {!collapsed && (
+                      <ChevronDown className={`nav-chevron ${isOpen ? 'open' : ''}`} size={16} />
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="nav-sublist">
+                      {item.children.map((child) => {
+                        const ChildIcon = child.icon;
+                        const isChildActive = child.id === activeSection;
+                        return (
+                          <button
+                            key={child.id}
+                            className={`nav-item nav-subitem ${isChildActive ? 'active' : ''}`}
+                            type="button"
+                            onClick={() => onNavigate(child.id)}
+                            title={collapsed ? child.label : undefined}
+                          >
+                            <ChildIcon size={16} />
+                            {!collapsed && <span>{child.label}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             const itemId = 'id' in item ? item.id : null;
             const isActive = itemId === activeSection;
             const isDisabled = 'disabled' in item && item.disabled === true;
-            const children = 'children' in item ? item.children : null;
-            const hasActiveChild = children?.some((child) => child.id === activeSection) ?? false;
             return (
-              <div key={item.label} className="nav-group">
-                <button
-                  className={`nav-item ${isActive ? 'active' : ''}`}
-                  type="button"
-                  disabled={isDisabled}
-                  onClick={() => {
-                    if (itemId) onNavigate(itemId);
-                  }}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <Icon size={18} />
-                  {!collapsed && <span>{item.label}</span>}
-                  {!collapsed && isDisabled && <small>em breve</small>}
-                </button>
-                {children && (!collapsed || hasActiveChild) && (
-                  <div className="nav-sublist">
-                    {children.map((child) => {
-                      const ChildIcon = child.icon;
-                      const isChildActive = child.id === activeSection;
-                      return (
-                        <button
-                          key={child.id}
-                          className={`nav-item nav-subitem ${isChildActive ? 'active' : ''}`}
-                          type="button"
-                          onClick={() => onNavigate(child.id)}
-                          title={collapsed ? child.label : undefined}
-                        >
-                          <ChildIcon size={16} />
-                          {!collapsed && <span>{child.label}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <button
+                key={item.label}
+                className={`nav-item ${isActive ? 'active' : ''}`}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => {
+                  if (itemId) onNavigate(itemId);
+                }}
+                title={collapsed ? item.label : undefined}
+              >
+                <Icon size={18} />
+                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && isDisabled && <small>em breve</small>}
+              </button>
             );
           })}
         </nav>
@@ -2084,11 +2153,13 @@ function staffErrorMessage(error: unknown): string {
 }
 
 function UsersPage() {
+  const { user: currentUser } = useAuth();
   const { data: currentRole, isLoading: roleLoading } = useCurrentStaffRole();
   const canManage = currentRole === 'super_admin';
   const { data: staff = [], isLoading, isError, refetch, isFetching } = useStaffList(canManage);
   const createMutation = useCreatePlatformStaff();
   const updateMutation = useUpdatePlatformStaff();
+  const [resetTarget, setResetTarget] = useState<{ member: PlatformStaffMember; action: CredentialResetAction } | null>(null);
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
@@ -2371,6 +2442,28 @@ function UsersPage() {
                           <td><span className={`role-badge role-${member.role}`}>{staffRoleLabel(member.role)}</span></td>
                           <td>{formatDateTime(new Date(member.created_at))}</td>
                           <td className="staff-actions-cell">
+                            {member.user_id !== currentUser?.id && (
+                              <>
+                                <button
+                                  className="icon-button table-action"
+                                  type="button"
+                                  title={`Enviar link de redefinição de senha para ${member.full_name || member.email || 'usuário'}`}
+                                  aria-label={`Resetar senha de ${member.full_name || member.email || 'usuário'}`}
+                                  onClick={() => setResetTarget({ member, action: 'password' })}
+                                >
+                                  <KeyRound size={16} />
+                                </button>
+                                <button
+                                  className="icon-button table-action"
+                                  type="button"
+                                  title={`Resetar autenticador (MFA) de ${member.full_name || member.email || 'usuário'}`}
+                                  aria-label={`Resetar MFA de ${member.full_name || member.email || 'usuário'}`}
+                                  onClick={() => setResetTarget({ member, action: 'mfa' })}
+                                >
+                                  <ShieldOff size={16} />
+                                </button>
+                              </>
+                            )}
                             <button
                               className="icon-button table-action"
                               type="button"
@@ -2391,8 +2484,31 @@ function UsersPage() {
           </>
         )}
       </section>
+
+      {resetTarget && (
+        <CredentialResetDialog
+          targetUserId={resetTarget.member.user_id}
+          targetLabel={resetTarget.member.full_name || resetTarget.member.email || 'este usuário'}
+          action={resetTarget.action}
+          onCancel={() => setResetTarget(null)}
+          onDone={(message) => {
+            setResetTarget(null);
+            setMessage({ type: 'success', text: message });
+          }}
+        />
+      )}
     </>
   );
+}
+
+function loadStoredOpenGroups(): Set<string> {
+  try {
+    const raw = localStorage.getItem('onlyfit.backoffice.sidebar.groups');
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? new Set(parsed.filter((id): id is string => typeof id === 'string')) : new Set();
+  } catch {
+    return new Set();
+  }
 }
 
 function AppShell() {
@@ -2400,11 +2516,22 @@ function AppShell() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('onlyfit.backoffice.sidebar') === 'collapsed');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionId>('dashboard');
+  const [openGroups, setOpenGroups] = useState<Set<string>>(loadStoredOpenGroups);
 
   const handleToggle = () => {
     setCollapsed((current) => {
       const next = !current;
       localStorage.setItem('onlyfit.backoffice.sidebar', next ? 'collapsed' : 'expanded');
+      return next;
+    });
+  };
+
+  const handleToggleGroup = (groupId: string) => {
+    setOpenGroups((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      localStorage.setItem('onlyfit.backoffice.sidebar.groups', JSON.stringify([...next]));
       return next;
     });
   };
@@ -2415,13 +2542,24 @@ function AppShell() {
         activeSection={activeSection}
         collapsed={collapsed}
         mobileOpen={mobileOpen}
+        openGroups={openGroups}
         onCloseMobile={() => setMobileOpen(false)}
         onNavigate={(section) => {
           setActiveSection(section);
           setMobileOpen(false);
+          const group = groupIdForSection(section);
+          if (group) {
+            setOpenGroups((current) => {
+              if (current.has(group)) return current;
+              const next = new Set(current).add(group);
+              localStorage.setItem('onlyfit.backoffice.sidebar.groups', JSON.stringify([...next]));
+              return next;
+            });
+          }
         }}
         onSignOut={signOut}
         onToggle={handleToggle}
+        onToggleGroup={handleToggleGroup}
       />
       <div className="main-column">
         <header className="mobile-header">

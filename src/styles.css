@@ -129,21 +129,22 @@ textarea:focus-visible {
 
 .app-shell {
   display: flex;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   background: rgb(var(--color-background));
 }
 
 .main-column {
   min-width: 0;
+  height: 100%;
   flex: 1;
+  overflow-y: auto;
 }
 
 .sidebar {
-  position: sticky;
-  top: 0;
   display: flex;
   width: 256px;
-  height: 100dvh;
+  height: 100%;
   flex-direction: column;
   border-right: 1px solid rgb(var(--color-outline-variant));
   background: rgb(var(--color-surface));
@@ -159,6 +160,7 @@ textarea:focus-visible {
 .mobile-header {
   display: flex;
   min-height: 64px;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -273,9 +275,11 @@ textarea:focus-visible {
 .nav-list {
   display: flex;
   flex: 1;
+  min-height: 0;
   flex-direction: column;
   gap: 4px;
   padding: 12px;
+  overflow-y: auto;
 }
 
 .nav-item {
@@ -319,8 +323,23 @@ textarea:focus-visible {
 
 .nav-group {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 4px;
+}
+
+.nav-group-toggle.has-active-child {
+  color: rgb(var(--color-primary));
+}
+
+.nav-chevron {
+  flex-shrink: 0;
+  color: rgb(var(--color-outline));
+  transition: transform 160ms ease;
+}
+
+.nav-chevron.open {
+  transform: rotate(180deg);
 }
 
 .nav-sublist {

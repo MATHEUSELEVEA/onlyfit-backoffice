@@ -2,13 +2,17 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  KeyRound,
   RefreshCw,
   Save,
   ShieldAlert,
+  ShieldOff,
   Trash2,
 } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
+import { useAuth } from '../contexts/useAuth';
 import { formatCurrencyExact, formatDateTime, formatNumber } from '../lib/format';
+import type { CredentialResetAction } from '../lib/credentialReset';
 import {
   displayName,
   formatDocument,
@@ -22,6 +26,7 @@ import {
 import { useUpdateUserAccount, useUserFootprint, useUserOverview } from '../hooks/useUsers';
 import { useProfessionalSpecialties } from '../hooks/useProfessionalSpecialties';
 import { UserDeleteDialog } from './UserDeleteDialog';
+import { CredentialResetDialog } from './CredentialResetDialog';
 
 type TabId = 'cadastro' | 'plataforma' | 'raiox';
 
@@ -750,11 +755,14 @@ export function UserDetail({
   onBack: () => void;
   onDeleted: (message: string) => void;
 }) {
+  const { user: currentUser } = useAuth();
   const [tab, setTab] = useState<TabId>('cadastro');
   const [deleting, setDeleting] = useState(false);
+  const [resetAction, setResetAction] = useState<CredentialResetAction | null>(null);
   const [banner, setBanner] = useState('');
   const query = useUserOverview(userId);
   const overview = query.data;
+  const isSelf = currentUser?.id === userId;
 
   if (query.isLoading) {
     return (
@@ -816,6 +824,30 @@ export function UserDetail({
             <RefreshCw className={query.isFetching ? 'spin' : ''} size={16} />
             Atualizar
           </button>
+          {canEdit && (
+            <button
+              className="button secondary"
+              type="button"
+              title={isSelf ? 'Use o fluxo normal para a própria conta' : undefined}
+              disabled={isSelf}
+              onClick={() => setResetAction('password')}
+            >
+              <KeyRound size={16} />
+              Resetar senha
+            </button>
+          )}
+          {canEdit && (
+            <button
+              className="button secondary"
+              type="button"
+              title={isSelf ? 'Use o fluxo normal para a própria conta' : undefined}
+              disabled={isSelf}
+              onClick={() => setResetAction('mfa')}
+            >
+              <ShieldOff size={16} />
+              Resetar MFA
+            </button>
+          )}
           {canDelete && (
             <button className="button danger" type="button" onClick={() => setDeleting(true)}>
               <Trash2 size={16} />
@@ -912,6 +944,19 @@ export function UserDetail({
           onDeleted={(summary) => {
             setDeleting(false);
             onDeleted(summary);
+          }}
+        />
+      )}
+
+      {resetAction && (
+        <CredentialResetDialog
+          targetUserId={userId}
+          targetLabel={name}
+          action={resetAction}
+          onCancel={() => setResetAction(null)}
+          onDone={(message) => {
+            setResetAction(null);
+            setBanner(message);
           }}
         />
       )}

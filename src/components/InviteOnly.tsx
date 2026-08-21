@@ -26,6 +26,7 @@ import {
   useInvitedEmails,
   useReleaseWaitlistAccess,
   useRemoveInvitedEmail,
+  useSendInviteEmails,
   useSetInviteOnlyEnabled,
   useWaitlist,
 } from '../hooks/useInviteOnly';
@@ -88,12 +89,14 @@ function InvitesTab({ canEdit }: { canEdit: boolean }) {
   const toggleMutation = useSetInviteOnlyEnabled();
   const addMutation = useAddInvitedEmails();
   const removeMutation = useRemoveInvitedEmail();
+  const sendInviteMutation = useSendInviteEmails();
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [emailsInput, setEmailsInput] = useState('');
   const [note, setNote] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [resendingEmail, setResendingEmail] = useState<string | null>(null);
 
   const listQuery = useInvitedEmails(search, PAGE_SIZE, page * PAGE_SIZE, true);
   const settings = settingsQuery.data;
@@ -135,14 +138,27 @@ function InvitesTab({ canEdit }: { canEdit: boolean }) {
           if (result.added.length) parts.push(`${formatNumber(result.added.length)} convidado(s)`);
           if (result.skipped.length) parts.push(`${formatNumber(result.skipped.length)} já estava(m) na lista`);
           if (result.invalid.length) parts.push(`${formatNumber(result.invalid.length)} inválido(s)`);
-          setFeedback({
-            type: result.added.length > 0 ? 'success' : 'error',
-            text: parts.length ? parts.join(' · ') : 'Nada a adicionar.',
-          });
+
           if (result.added.length > 0) {
             setEmailsInput('');
             setNote('');
             setPage(0);
+            sendInviteMutation.mutate(result.added, {
+              onSuccess: (sendResult) => {
+                if (sendResult.sent.length) parts.push('e-mail de convite enviado');
+                else if (sendResult.failed.length) parts.push('o e-mail de convite falhou ao enviar, use "Reenviar convite"');
+                setFeedback({ type: 'success', text: parts.join(' · ') });
+              },
+              onError: () => {
+                parts.push('o e-mail de convite falhou ao enviar, use "Reenviar convite"');
+                setFeedback({ type: 'success', text: parts.join(' · ') });
+              },
+            });
+          } else {
+            setFeedback({
+              type: 'error',
+              text: parts.length ? parts.join(' · ') : 'Nada a adicionar.',
+            });
           }
         },
         onError: (error) =>
@@ -163,6 +179,29 @@ function InvitesTab({ canEdit }: { canEdit: boolean }) {
           type: 'error',
           text: error instanceof Error ? error.message : 'Não foi possível remover o e-mail.',
         }),
+    });
+  };
+
+  const resendInvite = (email: string) => {
+    setFeedback(null);
+    setResendingEmail(email);
+    sendInviteMutation.mutate([email], {
+      onSuccess: (result) => {
+        setResendingEmail(null);
+        setFeedback({
+          type: result.sent.length > 0 ? 'success' : 'error',
+          text: result.sent.length > 0
+            ? `Convite reenviado para ${email}.`
+            : `Não foi possível reenviar o convite para ${email}.`,
+        });
+      },
+      onError: (error) => {
+        setResendingEmail(null);
+        setFeedback({
+          type: 'error',
+          text: error instanceof Error ? error.message : 'Não foi possível reenviar o convite.',
+        });
+      },
     });
   };
 
@@ -312,36 +351,59 @@ function InvitesTab({ canEdit }: { canEdit: boolean }) {
                     <th>E-mail</th>
                     <th>Origem</th>
                     <th>Conta</th>
+                    <th>Convite</th>
                     <th>Convidado em</th>
                     <th><span className="sr-only">Ações</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        <strong>{item.email}</strong>
-                        <span>{item.note || 'Sem observação'}</span>
-                      </td>
-                      <td><span className="role-badge">{invitedSourceLabel(item.source)}</span></td>
-                      <td>{item.has_account ? 'Já cadastrada' : 'Ainda não cadastrou'}</td>
-                      <td>{item.created_at ? formatDateTime(new Date(item.created_at)) : '—'}</td>
-                      <td className="staff-actions-cell">
-                        {canEdit && (
-                          <button
-                            className="icon-button table-action"
-                            type="button"
-                            title={`Remover ${item.email} da lista`}
-                            aria-label={`Remover ${item.email} da lista`}
-                            disabled={removeMutation.isPending}
-                            onClick={() => remove(item.email)}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((item) => {
+                    const isResending = resendingEmail === item.email;
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <strong>{item.email}</strong>
+                          <span>{item.note || 'Sem observação'}</span>
+                        </td>
+                        <td><span className="role-badge">{invitedSourceLabel(item.source)}</span></td>
+                        <td>{item.has_account ? 'Já cadastrada' : 'Ainda não cadastrou'}</td>
+                        <td>
+                          {item.has_account
+                            ? '—'
+                            : item.invite_email_sent_at
+                              ? `Enviado em ${formatDateTime(new Date(item.invite_email_sent_at))}`
+                              : 'Pendente'}
+                        </td>
+                        <td>{item.created_at ? formatDateTime(new Date(item.created_at)) : '—'}</td>
+                        <td className="staff-actions-cell">
+                          {canEdit && !item.has_account && (
+                            <button
+                              className="icon-button table-action"
+                              type="button"
+                              title={`Reenviar convite para ${item.email}`}
+                              aria-label={`Reenviar convite para ${item.email}`}
+                              disabled={isResending}
+                              onClick={() => resendInvite(item.email)}
+                            >
+                              {isResending ? <RefreshCw className="spin" size={16} /> : <Send size={16} />}
+                            </button>
+                          )}
+                          {canEdit && (
+                            <button
+                              className="icon-button table-action"
+                              type="button"
+                              title={`Remover ${item.email} da lista`}
+                              aria-label={`Remover ${item.email} da lista`}
+                              disabled={removeMutation.isPending}
+                              onClick={() => remove(item.email)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

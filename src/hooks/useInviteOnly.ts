@@ -6,6 +6,7 @@ import {
   listWaitlist,
   releaseWaitlistAccess,
   removeInvitedEmail,
+  sendInviteEmails,
   setInviteOnlyEnabled,
   type WaitlistStatus,
 } from '../lib/inviteOnly';
@@ -48,6 +49,16 @@ export function useAddInvitedEmails() {
       void queryClient.invalidateQueries({ queryKey: ['invited-emails'] });
       void queryClient.invalidateQueries({ queryKey: ['access-waitlist'] });
       void queryClient.invalidateQueries({ queryKey: settingsKey });
+    },
+  });
+}
+
+export function useSendInviteEmails() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (emails: string[]) => sendInviteEmails(emails),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invited-emails'] });
     },
   });
 }
