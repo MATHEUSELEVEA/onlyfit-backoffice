@@ -12,8 +12,8 @@
   --color-on-surface-variant: 179 183 192;
   --color-outline: 128 131 140;
   --color-outline-variant: 58 61 67;
-  --color-primary: 202 243 0;
-  --color-on-primary: 30 38 0;
+  --color-primary: 0 138 191;
+  --color-on-primary: 3 25 42;
   --color-secondary: 255 183 156;
   --color-tertiary: 178 202 215;
   --color-error: 255 180 171;
@@ -35,8 +35,8 @@
   --color-on-surface-variant: 74 76 62;
   --color-outline: 140 143 122;
   --color-outline-variant: 211 213 196;
-  --color-primary: 26 27 21;
-  --color-on-primary: 202 243 0;
+  --color-primary: 8 127 140;
+  --color-on-primary: 255 255 255;
   --color-secondary: 140 74 53;
   --color-tertiary: 61 107 122;
   --color-error: 186 26 26;

@@ -21,7 +21,7 @@ Crie `.env` a partir de `.env.example`. Só use chaves públicas (`anon`) no cli
 
 1. RLS e RPCs de staff (`platform_is_staff`) são a fonte real de autorização.
 2. Nenhum segredo no cliente.
-3. O design herda o sistema canônico do `onlyfit-mobile`: Inter, tokens semânticos, superfícies grafite, acento lime e profundidade tonal.
+3. O design herda o sistema canônico do produto: Inter, tokens semânticos, superfícies grafite, azul/teal oficiais e profundidade tonal.
 4. O backoffice é operacional: densidade, leitura rápida, estados claros e navegação previsível valem mais do que efeito visual.
 5. Backend, migrations e edge functions vivem em `../onlyfit-supabase`.
 6. Migrations e Edge Functions são implantadas pelo GitHub Actions do `onlyfit-supabase` após merge na `main`. Não execute deploy de backend a partir deste app.
