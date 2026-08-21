@@ -2,8 +2,8 @@
 name: OnlyFit Backoffice
 description: Portal operacional interno com a identidade visual OnlyFit adaptada para gestão
 colors:
-  primary: "#CAF300"
-  on-primary: "#1E2600"
+  primary: "#008ABF"
+  on-primary: "#03192A"
   background: "#0D0E10"
   surface: "#121315"
   surface-container: "#1F2023"
@@ -61,7 +61,7 @@ Use tokens CSS semânticos. Componentes não devem usar hex diretamente.
 
 ## Regras
 
-- Acento lime só para seleção, foco e chamadas primárias.
+- Azul/teal oficial só para seleção, foco e chamadas primárias.
 - Profundidade por camadas tonais, não por sombras grandes.
 - Inter como única família tipográfica.
 - Cards com raio até 12px.

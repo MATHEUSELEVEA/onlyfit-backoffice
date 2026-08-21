@@ -34,7 +34,7 @@ Premium, preciso, firme. A identidade visual é a do OnlyFit, mas a UX troca o c
 ## Design Principles
 
 1. **Operação antes de ornamentação.** Cada bloco precisa responder a uma pergunta real de gestão.
-2. **A marca aparece por contenção.** Grafite, lime e profundidade tonal carregam a identidade sem transformar o painel em app de cliente.
+2. **A marca aparece por contenção.** Grafite, azul/teal oficial e profundidade tonal carregam a identidade sem transformar o painel em app de cliente.
 3. **Navegação cresce sem quebrar.** Sidebar recolhível e itens planejados para novas áreas.
 4. **Estado real, sempre.** Dados vêm de RPCs/RLS; fallback visual nunca finge permissão ou sucesso.
 5. **Números primeiro, investigação depois.** Grandes números ficam acima; listas e alertas explicam o que precisa de ação.
